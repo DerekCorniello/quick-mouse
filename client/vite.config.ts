@@ -56,5 +56,9 @@
     server: {
       port: 3000,
       open: true,
+      https: {
+        key: './certs/localhost-key.pem',
+        cert: './certs/localhost.pem',
+      },
     },
   });

@@ -39,6 +39,10 @@ build/
 .vite/
 *.tsbuildinfo
 
+# Certificates
+certs/
+*mkcert
+
 # Logs
 logs
 *.log
