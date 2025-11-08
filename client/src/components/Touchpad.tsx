@@ -56,30 +56,7 @@ export function Touchpad({
         <Box sx={(theme) => ({ position: 'absolute', inset: 0, bgcolor: theme.palette.app?.indicator ?? 'rgba(59,130,246,0.08)' })} />
       )}
 
-      {/* Cursor Position Indicator */}
-      <Box
-        sx={{ position: 'absolute', width: 48, height: 48, transition: 'all 75ms' }}
-        style={{ left: `${cursorPosition.x}%`, top: `${cursorPosition.y}%`, transform: 'translate(-50%, -50%)' }}
-      >
-        <Box
-          sx={(theme) => ({
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
-            border: 3,
-            bgcolor: isLeftPressed
-              ? theme.palette.app?.cursor?.left?.bg ?? theme.palette.success.main
-              : isRightPressed
-              ? theme.palette.app?.cursor?.right?.bg ?? theme.palette.secondary.main
-              : theme.palette.app?.cursor?.default?.bg ?? theme.palette.primary.main,
-            borderColor: isLeftPressed
-              ? theme.palette.app?.cursor?.left?.border ?? theme.palette.success.dark
-              : isRightPressed
-              ? theme.palette.app?.cursor?.right?.border ?? theme.palette.secondary.dark
-              : theme.palette.app?.cursor?.default?.border ?? theme.palette.primary.dark,
-          })}
-        />
-      </Box>
+
 
       {/* Instructions */}
       <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>

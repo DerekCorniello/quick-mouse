@@ -13,6 +13,8 @@ export default function App() {
   const [sensitivity, setSensitivity] = useState(2);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
+  const [swipeDirection, setSwipeDirection] = useState<string>('None');
+  const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +33,23 @@ export default function App() {
     const deltaX = (touch.clientX - lastTouchRef.current.x) * sensitivity;
     const deltaY = (touch.clientY - lastTouchRef.current.y) * sensitivity;
 
+    // Calculate swipe direction and magnitude
+    const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    setSwipeMagnitude(Math.round(magnitude));
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Horizontal movement is dominant
+      setSwipeDirection(deltaX > 0 ? 'Right' : 'Left');
+    } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      // Vertical movement is dominant
+      setSwipeDirection(deltaY > 0 ? 'Down' : 'Up');
+    } else {
+      // Diagonal movement
+      const horizontal = deltaX > 0 ? 'Right' : 'Left';
+      const vertical = deltaY > 0 ? 'Down' : 'Up';
+      setSwipeDirection(`${vertical}-${horizontal}`);
+    }
+
     setCursorPosition((prev) => ({
       x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
       y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
@@ -42,6 +61,8 @@ export default function App() {
   const handleTouchEnd = () => {
     lastTouchRef.current = null;
     setTouchActive(false);
+    setSwipeDirection('None');
+    setSwipeMagnitude(0);
   };
 
   const handleLeftTouchStart = () => {
@@ -126,7 +147,7 @@ export default function App() {
           </div>
         )}
 
-        <StatusIndicator cursorPosition={cursorPosition} />
+        <StatusIndicator swipeDirection={swipeDirection} swipeMagnitude={swipeMagnitude} />
         {showSensorLog && (
           <div style={{ padding: 16 }}>
             <SensorLog />
