@@ -2,11 +2,11 @@ package server
 
 // packet types define the different kinds of messages we can send, like mouse movements or clicks
 // packets are the actual structs that implement the packet interface and hold the data for each type
-// the serializer handles converting packets to bytes for network transmission and back to packets 
+// the serializer handles converting packets to bytes for network transmission and back to packets
 // when receiving, supporting both json and binary formats. the registry is a map that creates the
 // correct packet struct based on the packet type name
 //
-// flow is: 
+// flow is:
 // 			client sends json with type field,
 //			server extracts type,
 //			uses registry to create packet instance,
@@ -23,7 +23,8 @@ import (
 type PacketType string
 
 // NOTE: this is where we add more packets as needed, so we can add more later for
-//       presentation mode and whatnot
+//
+//	presentation mode and whatnot
 const (
 	MouseMove      PacketType = "mouse_move"
 	LeftClickUp    PacketType = "left_click_up"
@@ -31,7 +32,16 @@ const (
 	LeftClickDown  PacketType = "left_click_down"
 	RightClickDown PacketType = "right_click_down"
 	ScrollMove     PacketType = "scroll_move"
+	SwitchMode     PacketType = "switch_mode"
 	KeepAlive      PacketType = "keep_alive"
+)
+
+// ControlType represents different mouse control modes
+type ControlType int
+
+const (
+	Flat   ControlType = 0 // direct 1:1 mapping
+	Remote ControlType = 1 // may include processing/acceleration
 )
 
 // Packet registry for type reconstruction
@@ -42,6 +52,7 @@ var packetRegistry = map[PacketType]func() Packet{
 	LeftClickDown:  func() Packet { return &LeftClickDownPacket{} },
 	RightClickDown: func() Packet { return &RightClickDownPacket{} },
 	ScrollMove:     func() Packet { return &ScrollMovePacket{} },
+	SwitchMode:     func() Packet { return &SwitchModePacket{} },
 	KeepAlive:      func() Packet { return &KeepAlivePacket{} },
 }
 
@@ -52,8 +63,9 @@ type Packet interface {
 
 // data packet structs
 type MouseMovePacket struct {
-	DeltaX int32 `json:"x"`
-	DeltaY int32 `json:"y"`
+	DeltaX      int32       `json:"x"`
+	DeltaY      int32       `json:"y"`
+	ControlType ControlType `json:"control_type,omitempty"` // optional override
 }
 
 func (p MouseMovePacket) Type() PacketType {
@@ -92,6 +104,12 @@ type RightClickDownPacket struct{}
 
 func (p RightClickDownPacket) Type() PacketType {
 	return RightClickDown
+}
+
+type SwitchModePacket struct{}
+
+func (p SwitchModePacket) Type() PacketType {
+	return SwitchMode
 }
 
 type KeepAlivePacket struct{}
