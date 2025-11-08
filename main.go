@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/mdp/qrterminal/v3"
+	"quick-mouse/server"
 )
 
 // this is how we get the ip of the pc to host correctly
@@ -128,6 +130,8 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+var serializer server.Serializer = server.JSONSerializer{}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -144,7 +148,38 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Printf("Received: %s\n", message)
 
-		err = conn.WriteMessage(mt, message)
+		// Parse packet type from JSON
+		var envelope struct {
+			Type server.PacketType `json:"type"`
+		}
+		if err := json.Unmarshal(message, &envelope); err != nil {
+			log.Println("Error parsing JSON:", err)
+			continue
+		}
+		if envelope.Type == "" {
+			log.Println("Missing or invalid type field")
+			continue
+		}
+		packetType := envelope.Type
+
+		// Unmarshal the packet
+		packet, err := serializer.Unmarshal(message, packetType)
+		if err != nil {
+			log.Println("Error unmarshaling packet:", err)
+			continue
+		}
+
+		// Process packet (for now, just echo back)
+		// TODO: Add actual packet processing logic
+
+		// Marshal back
+		response, err := serializer.Marshal(packet)
+		if err != nil {
+			log.Println("Error marshaling response:", err)
+			continue
+		}
+
+		err = conn.WriteMessage(mt, response)
 		if err != nil {
 			log.Println("Error writing message:", err)
 			break
