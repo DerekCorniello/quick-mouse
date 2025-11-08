@@ -23,9 +23,9 @@ import (
 type PacketType string
 
 // NOTE: this is where we add more packets as needed, so we can add more later for
-//
-//	presentation mode and whatnot
+//		 presentation mode and whatnot
 const (
+	Auth           PacketType = "auth"
 	MouseMove      PacketType = "mouse_move"
 	LeftClickUp    PacketType = "left_click_up"
 	RightClickUp   PacketType = "right_click_up"
@@ -40,12 +40,13 @@ const (
 type ControlType int
 
 const (
-	Flat   ControlType = 0 // direct 1:1 mapping
-	Remote ControlType = 1 // may include processing/acceleration
+	Flat   ControlType = 0
+	Remote ControlType = 1
 )
 
 // Packet registry for type reconstruction
 var packetRegistry = map[PacketType]func() Packet{
+	Auth:           func() Packet { return &AuthPacket{} },
 	MouseMove:      func() Packet { return &MouseMovePacket{} },
 	LeftClickUp:    func() Packet { return &LeftClickUpPacket{} },
 	RightClickUp:   func() Packet { return &RightClickUpPacket{} },
@@ -56,12 +57,20 @@ var packetRegistry = map[PacketType]func() Packet{
 	KeepAlive:      func() Packet { return &KeepAlivePacket{} },
 }
 
-// Packet represents a network packet that can be serialized
+// represents a network packet that can be serialized
 type Packet interface {
 	Type() PacketType
 }
 
 // data packet structs
+type AuthPacket struct {
+	Key string `json:"key"`
+}
+
+func (p AuthPacket) Type() PacketType {
+	return Auth
+}
+
 type MouseMovePacket struct {
 	DeltaX      int32       `json:"x"`
 	DeltaY      int32       `json:"y"`

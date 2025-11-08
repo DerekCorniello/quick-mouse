@@ -30,10 +30,15 @@ func (c *PacketController) SetControlType(ct ControlType) {
 	c.controlType = ct
 }
 
-//  takes a deserialized packet and executes the corresponding mouse action
+// takes a deserialized packet and executes the corresponding mouse action
 // this is where network commands become actual cursor movements and button presses
 func (c *PacketController) ProcessPacket(packet Packet) error {
 	switch packet.Type() {
+	case Auth:
+		// auth is handled in wsHandler, just ack
+		log.Println("Auth packet received")
+		return nil
+
 	case MouseMove:
 		p := packet.(*MouseMovePacket)
 		controlType := c.controlType
