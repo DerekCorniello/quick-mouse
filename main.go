@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/gorilla/websocket"
 	"github.com/mdp/qrterminal/v3"
@@ -32,15 +34,6 @@ func getLocalIP() string {
 	return "localhost"
 }
 
-// generates and displays a QR code for creating the connection from phone to pc
-func displayQR(port string) {
-	localIP := getLocalIP()
-	httpURL := fmt.Sprintf("http://%s%s/?key=%s", localIP, port, url.QueryEscape(authKey))
-
-	fmt.Println("\nScan this QR code to access the WebSocket client:")
-	qrterminal.Generate(httpURL, qrterminal.L, os.Stdout)
-	fmt.Printf("\nLanding page URL: %s\n\n", httpURL)
-}
 
 // landingPageHandler serves an HTML page with a WebSocket test client
 func landingPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -242,6 +235,43 @@ var upgrader = websocket.Upgrader{
 
 var serializer server.Serializer = server.JSONSerializer{}
 var controller *server.PacketController
+var connectedClients int
+
+func enterAlternateScreen() {
+	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
+}
+
+func exitAlternateScreen() {
+	fmt.Print("\033[?1049l") // switch back to primary screen
+}
+
+func updateDisplay() {
+	// clear screen and move to top
+	fmt.Print("\033[H\033[2J")
+
+	if connectedClients > 0 {
+		fmt.Println("Status: Device connected")
+		fmt.Println("Server running on :3000")
+		fmt.Println("Press Ctrl+C to exit")
+	} else {
+		localIP := getLocalIP()
+		httpURL := fmt.Sprintf("http://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
+
+		fmt.Println("Scan this QR code to connect:")
+
+		qrterminal.GenerateWithConfig(httpURL, qrterminal.Config{
+			Level:     qrterminal.L,
+			Writer:    os.Stdout,
+			BlackChar: qrterminal.BLACK,
+			WhiteChar: qrterminal.WHITE,
+			QuietZone: 0,
+		})
+
+		fmt.Printf("URL: %s\n", httpURL)
+		fmt.Println("Press Ctrl+C to exit")
+	}
+}
+
 var authKey string
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +281,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+
+	connectedClients++
+	updateDisplay()
+	defer func() {
+		connectedClients--
+		updateDisplay()
+	}()
 
 	// Require authentication first
 	mt, message, err := conn.ReadMessage()
@@ -371,10 +408,20 @@ func generateAuthKey() string {
 }
 
 func main() {
-	// Generate authentication key
-	authKey = generateAuthKey()
+	// lets not overflow the tui
+	enterAlternateScreen()
+	defer exitAlternateScreen()
 
-	// Initialize packet controller with default flat mode
+	// set up a signal handling for clean exit
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		exitAlternateScreen()
+		os.Exit(0)
+	}()
+
+	authKey = generateAuthKey()
 	var err error
 	controller, err = server.NewPacketController(server.Flat)
 	if err != nil {
@@ -384,8 +431,10 @@ func main() {
 
 	http.HandleFunc("/", landingPageHandler)
 	http.HandleFunc("/ws", wsHandler)
-	displayQR(":3000")
+	updateDisplay()
 	fmt.Println("WebSocket server started on :3000")
+	fmt.Println("Press Ctrl+C to exit")
+
 	err = http.ListenAndServe(":3000", nil)
 	if err != nil {
 		log.Fatal("Error starting server:", err)
