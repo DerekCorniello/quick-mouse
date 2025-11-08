@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
+import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
 
 export function SensorLog() {
   const [eventCount, setEventCount] = useState(0);
@@ -44,18 +48,17 @@ export function SensorLog() {
       window.removeEventListener("deviceorientation", handleOrientation);
       setIsRunning(false);
     } else {
-      // Request permission for device sensors (iOS 13+ and some desktop browsers)
       let motionGranted = true;
       let orientationGranted = true;
 
+      type PermissionRequestable = { requestPermission?: () => Promise<PermissionState> };
+
       if (
         typeof DeviceMotionEvent !== "undefined" &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typeof (DeviceMotionEvent as any).requestPermission === "function"
+        typeof (DeviceMotionEvent as unknown as PermissionRequestable).requestPermission === "function"
       ) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const permission = await (DeviceMotionEvent as any).requestPermission();
+          const permission = await (DeviceMotionEvent as unknown as PermissionRequestable).requestPermission!();
           motionGranted = permission === "granted";
         } catch (error) {
           motionGranted = false;
@@ -64,12 +67,10 @@ export function SensorLog() {
 
       if (
         typeof DeviceOrientationEvent !== "undefined" &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        typeof (DeviceOrientationEvent as any).requestPermission === "function"
+        typeof (DeviceOrientationEvent as unknown as PermissionRequestable).requestPermission === "function"
       ) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          const permission = await (DeviceOrientationEvent as unknown as PermissionRequestable).requestPermission!();
           orientationGranted = permission === "granted";
         } catch (error) {
           orientationGranted = false;
@@ -92,62 +93,59 @@ export function SensorLog() {
   }, [handleMotion, handleOrientation]);
 
   return (
-    <div className="p-4 bg-slate-950/50 border border-slate-700 rounded-2xl">
-      <div className="flex items-center gap-4 mb-4">
-        <button
+    <Paper elevation={0} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Button
           id="start_demo"
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            isRunning
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-green-500 hover:bg-green-600 text-white'
-          }`}
+          variant={isRunning ? 'contained' : 'contained'}
+          color={isRunning ? 'error' : 'success'}
           onClick={startDemo}
         >
           {isRunning ? 'Stop demo' : 'Start demo'}
-        </button>
-        <p className="text-slate-300">
-          Datapoints: <span className="text-blue-400 font-medium">{eventCount}</span>
-        </p>
-      </div>
+        </Button>
+        <Typography color="text.secondary">
+          Datapoints: <Typography component="span" color="primary">{eventCount}</Typography>
+        </Typography>
+      </Box>
 
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-slate-200 font-medium mb-2">Orientation</h4>
-          <ul className="text-slate-400 space-y-1">
-            <li>X-axis (β): <span className="text-slate-300">{orientation.beta.toFixed(10)}</span>°</li>
-            <li>Y-axis (γ): <span className="text-slate-300">{orientation.gamma.toFixed(10)}</span>°</li>
-            <li>Z-axis (α): <span className="text-slate-300">{orientation.alpha.toFixed(10)}</span>°</li>
-          </ul>
-        </div>
+      <Box sx={{ display: 'grid', gap: 2 }}>
+        <Box>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1 }}>Orientation</Typography>
+          <Box component="ul" sx={{ color: 'text.secondary', pl: 2, m: 0 }}>
+            <li>X-axis (β): <Typography component="span" color="text.primary">{orientation.beta.toFixed(10)}</Typography>°</li>
+            <li>Y-axis (γ): <Typography component="span" color="text.primary">{orientation.gamma.toFixed(10)}</Typography>°</li>
+            <li>Z-axis (α): <Typography component="span" color="text.primary">{orientation.alpha.toFixed(10)}</Typography>°</li>
+          </Box>
+        </Box>
 
-        <div>
-          <h4 className="text-slate-200 font-medium mb-2">Accelerometer</h4>
-          <ul className="text-slate-400 space-y-1">
-            <li>X-axis: <span className="text-slate-300">{acceleration.x.toFixed(10)}</span> m/s²</li>
-            <li>Y-axis: <span className="text-slate-300">{acceleration.y.toFixed(10)}</span> m/s²</li>
-            <li>Z-axis: <span className="text-slate-300">{acceleration.z.toFixed(10)}</span> m/s²</li>
-            <li>Interval: <span className="text-slate-300">{interval.toFixed(2)}</span> ms</li>
-          </ul>
-        </div>
+        <Box>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1 }}>Accelerometer</Typography>
+          <Box component="ul" sx={{ color: 'text.secondary', pl: 2, m: 0 }}>
+            <li>X-axis: <Typography component="span" color="text.primary">{acceleration.x.toFixed(10)}</Typography> m/s²</li>
+            <li>Y-axis: <Typography component="span" color="text.primary">{acceleration.y.toFixed(10)}</Typography> m/s²</li>
+            <li>Z-axis: <Typography component="span" color="text.primary">{acceleration.z.toFixed(10)}</Typography> m/s²</li>
+            <li>Interval: <Typography component="span" color="text.primary">{interval.toFixed(2)}</Typography> ms</li>
+          </Box>
+        </Box>
 
-        <div>
-          <h4 className="text-slate-200 font-medium mb-2">Accelerometer (with gravity)</h4>
-          <ul className="text-slate-400 space-y-1">
-            <li>X-axis: <span className="text-slate-300">{accelerationIncludingGravity.x.toFixed(10)}</span> m/s²</li>
-            <li>Y-axis: <span className="text-slate-300">{accelerationIncludingGravity.y.toFixed(10)}</span> m/s²</li>
-            <li>Z-axis: <span className="text-slate-300">{accelerationIncludingGravity.z.toFixed(10)}</span> m/s²</li>
-          </ul>
-        </div>
+        <Box>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1 }}>Accelerometer (with gravity)</Typography>
+          <Box component="ul" sx={{ color: 'text.secondary', pl: 2, m: 0 }}>
+            <li>X-axis: <Typography component="span" color="text.primary">{accelerationIncludingGravity.x.toFixed(10)}</Typography> m/s²</li>
+            <li>Y-axis: <Typography component="span" color="text.primary">{accelerationIncludingGravity.y.toFixed(10)}</Typography> m/s²</li>
+            <li>Z-axis: <Typography component="span" color="text.primary">{accelerationIncludingGravity.z.toFixed(10)}</Typography> m/s²</li>
+          </Box>
+        </Box>
 
-        <div>
-          <h4 className="text-slate-200 font-medium mb-2">Gyroscope</h4>
-          <ul className="text-slate-400 space-y-1">
-            <li>X-axis: <span className="text-slate-300">{rotationRate.beta.toFixed(10)}</span>°/s</li>
-            <li>Y-axis: <span className="text-slate-300">{rotationRate.gamma.toFixed(10)}</span>°/s</li>
-            <li>Z-axis: <span className="text-slate-300">{rotationRate.alpha.toFixed(10)}</span>°/s</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+        <Box>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1 }}>Gyroscope</Typography>
+          <Box component="ul" sx={{ color: 'text.secondary', pl: 2, m: 0 }}>
+            <li>X-axis: <Typography component="span" color="text.primary">{rotationRate.beta.toFixed(10)}</Typography>°/s</li>
+            <li>Y-axis: <Typography component="span" color="text.primary">{rotationRate.gamma.toFixed(10)}</Typography>°/s</li>
+            <li>Z-axis: <Typography component="span" color="text.primary">{rotationRate.alpha.toFixed(10)}</Typography>°/s</li>
+          </Box>
+        </Box>
+      </Box>
+    </Paper>
   );
 }

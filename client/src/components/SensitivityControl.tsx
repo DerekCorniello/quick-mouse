@@ -1,3 +1,7 @@
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Slider from "@mui/material/Slider";
+
 interface SensitivityControlProps {
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
@@ -5,20 +9,19 @@ interface SensitivityControlProps {
 
 export function SensitivityControl({ sensitivity, onSensitivityChange }: SensitivityControlProps) {
   return (
-    <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-slate-300">Sensitivity</span>
-        <span className="text-blue-400">{sensitivity}x</span>
-      </div>
-      <input
-        type="range"
-        min="1"
-        max="5"
-        step="0.5"
+    <Box sx={{ p: 2, borderRadius: 3, border: 1, borderColor: 'divider', bgcolor: 'transparent' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Typography variant="body2" color="text.secondary">Sensitivity</Typography>
+        <Typography variant="body2" color="primary">{sensitivity}x</Typography>
+      </Box>
+      <Slider
         value={sensitivity}
-        onChange={(e) => onSensitivityChange(parseFloat(e.target.value))}
-        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        min={1}
+        max={5}
+        step={0.5}
+        onChange={(_, value) => onSensitivityChange(Array.isArray(value) ? value[0] : value)}
+        aria-label="sensitivity"
       />
-    </div>
+    </Box>
   );
 }

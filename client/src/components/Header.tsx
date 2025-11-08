@@ -1,12 +1,68 @@
-import { MousePointer2 } from "lucide-react";
+import AppBar from "@mui/material/AppBar";
+import { useState } from "react";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import SettingsIcon from "@mui/icons-material/Settings";
+import MouseIcon from "@mui/icons-material/Mouse";
+import SettingsModal from "./SettingsModal";
 
-export function Header() {
+export function Header({
+  sensitivity,
+  onSensitivityChange,
+  showSensorLog,
+  onToggleSensorLog,
+  buttonsAboveTouchpad,
+  onToggleButtonPosition,
+}: {
+  sensitivity: number;
+  onSensitivityChange: (value: number) => void;
+  showSensorLog: boolean;
+  onToggleSensorLog: () => void;
+  buttonsAboveTouchpad: boolean;
+  onToggleButtonPosition: () => void;
+}) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const handleSettingsOpen = () => {
+    setSettingsOpen(true);
+  };
+
+  const handleSettingsClose = () => {
+    setSettingsOpen(false);
+  };
+
   return (
-    <div className="p-4 bg-slate-950/50 border-b border-slate-700">
-      <div className="flex items-center gap-2 text-white">
-        <MousePointer2 className="w-5 h-5" />
-        <h1>Quick Mouse</h1>
-      </div>
-    </div>
+    <AppBar
+      position="static"
+      color="transparent"
+      elevation={0}
+      sx={{ borderBottom: 1, borderColor: "divider", bgcolor: "transparent" }}
+    >
+      <Toolbar>
+        <MouseIcon sx={{ mr: 1 }} />
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          Quick Mouse
+        </Typography>
+        <IconButton
+          edge="end"
+          color="inherit"
+          aria-label="settings"
+          onClick={handleSettingsOpen}
+        >
+          <SettingsIcon />
+        </IconButton>
+        <SettingsModal
+          open={settingsOpen}
+          onClose={handleSettingsClose}
+          sensitivity={sensitivity}
+          onSensitivityChange={onSensitivityChange}
+          showSensorLog={showSensorLog}
+          onToggleSensorLog={onToggleSensorLog}
+          buttonsAboveTouchpad={buttonsAboveTouchpad}
+          onToggleButtonPosition={onToggleButtonPosition}
+        />
+      </Toolbar>
+    </AppBar>
   );
 }

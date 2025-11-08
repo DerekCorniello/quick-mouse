@@ -122,6 +122,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    user-select: none;
   }
 
   body {
@@ -133,7 +134,7 @@
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
     h1 {
       font-size: var(--text-2xl);
       font-weight: var(--font-weight-medium);
@@ -186,4 +187,10 @@
 
 html {
   font-size: var(--font-size);
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
+body {
+  overflow: hidden;
 }

@@ -1,46 +1,62 @@
-import { Circle } from "lucide-react";
+import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import MouseIcon from "@mui/icons-material/Mouse";
+import Box from "@mui/material/Box";
 
 interface MouseButtonsProps {
   isLeftPressed: boolean;
   isRightPressed: boolean;
-  onLeftClick: () => void;
-  onRightClick: () => void;
+  onLeftTouchStart: () => void;
+  onLeftTouchEnd: () => void;
+  onRightTouchStart: () => void;
+  onRightTouchEnd: () => void;
 }
 
-export function MouseButtons({ isLeftPressed, isRightPressed, onLeftClick, onRightClick }: MouseButtonsProps) {
+export function MouseButtons({
+  isLeftPressed,
+  isRightPressed,
+  onLeftTouchStart,
+  onLeftTouchEnd,
+  onRightTouchStart,
+  onRightTouchEnd
+}: MouseButtonsProps) {
   return (
-    <div className="p-4 bg-slate-950/50 border-b border-slate-700">
-      <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-        {/* Left Click */}
-        <button
-          onTouchStart={onLeftClick}
-          className={`h-40 rounded-2xl border-4 transition-all active:scale-95 ${
-            isLeftPressed
-              ? "bg-green-500 border-green-400 shadow-lg shadow-green-500/50"
-              : "bg-slate-700 border-slate-600 active:bg-slate-600"
-          }`}
-        >
-          <div className="flex flex-col items-center justify-center gap-2 text-white">
-            <Circle className="w-10 h-10" />
-            <span>Left Click</span>
-          </div>
-        </button>
+    <Paper square elevation={0} sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'transparent' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, maxWidth: 600, mx: 'auto' }}>
+        <Box>
+          <Button
+            onTouchStart={onLeftTouchStart}
+            onTouchEnd={onLeftTouchEnd}
+            onTouchCancel={onLeftTouchEnd}
+            variant={isLeftPressed ? 'contained' : 'outlined'}
+            color={isLeftPressed ? 'success' : 'inherit'}
+            fullWidth
+            sx={{ height: 160, borderRadius: 4, touchAction: 'none' }}
+          >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.primary' }}>
+                <MouseIcon sx={{ fontSize: 40 }} />
+                <Box component="span">Left Click</Box>
+              </Box>
+          </Button>
+        </Box>
 
-        {/* Right Click */}
-        <button
-          onTouchStart={onRightClick}
-          className={`h-40 rounded-2xl border-4 transition-all active:scale-95 ${
-            isRightPressed
-              ? "bg-purple-500 border-purple-400 shadow-lg shadow-purple-500/50"
-              : "bg-slate-700 border-slate-600 active:bg-slate-600"
-          }`}
-        >
-          <div className="flex flex-col items-center justify-center gap-2 text-white">
-            <Circle className="w-10 h-10" />
-            <span>Right Click</span>
-          </div>
-        </button>
-      </div>
-    </div>
+        <Box>
+          <Button
+            onTouchStart={onRightTouchStart}
+            onTouchEnd={onRightTouchEnd}
+            onTouchCancel={onRightTouchEnd}
+            variant={isRightPressed ? 'contained' : 'outlined'}
+            color={isRightPressed ? 'secondary' : 'inherit'}
+            fullWidth
+            sx={{ height: 160, borderRadius: 4, touchAction: 'none' }}
+          >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.primary' }}>
+                <MouseIcon sx={{ fontSize: 40 }} />
+                <Box component="span">Right Click</Box>
+              </Box>
+          </Button>
+        </Box>
+      </Box>
+    </Paper>
   );
 }

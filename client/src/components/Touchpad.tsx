@@ -1,4 +1,6 @@
-import { Hand } from "lucide-react";
+import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
+import TouchAppIcon from "@mui/icons-material/TouchApp";
 import { RefObject } from "react";
 
 interface TouchpadProps {
@@ -23,56 +25,67 @@ export function Touchpad({
   onTouchEnd,
 }: TouchpadProps) {
   return (
-    <div
+    <Paper
       ref={touchpadRef}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      className={`relative flex-1 bg-gradient-to-br from-slate-700 to-slate-800 rounded-3xl border-4 transition-all ${
-        touchActive
-          ? "border-blue-500 shadow-lg shadow-blue-500/50"
-          : "border-slate-600"
-      } overflow-hidden touch-none`}
+      onTouchCancel={onTouchEnd}
+      elevation={0}
+      square
+      sx={(theme) => ({
+        position: 'relative',
+        flex: 1,
+        borderRadius: 3,
+        border: 2,
+        borderColor: touchActive ? theme.palette.app?.cursor?.default?.border ?? theme.palette.primary.main : theme.palette.divider,
+        overflow: 'hidden',
+        bgcolor: 'transparent',
+        touchAction: 'none',
+      })}
     >
       {/* Grid Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="grid grid-cols-8 grid-rows-8 h-full w-full">
-          {Array.from({ length: 64 }).map((_, i) => (
-            <div key={i} className="border border-slate-500" />
-          ))}
-        </div>
-      </div>
+      <Box sx={{ position: 'absolute', inset: 0, opacity: 0.08, display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)' }}>
+        {Array.from({ length: 64 }).map((_, i) => (
+          <Box key={i} sx={(theme) => ({ border: 1, borderColor: theme.palette.app?.grid ?? theme.palette.divider })} />
+        ))}
+      </Box>
 
       {/* Touch Indicator */}
       {touchActive && (
-        <div className="absolute inset-0 bg-blue-500/10 animate-pulse" />
+        <Box sx={(theme) => ({ position: 'absolute', inset: 0, bgcolor: theme.palette.app?.indicator ?? 'rgba(59,130,246,0.08)' })} />
       )}
 
       {/* Cursor Position Indicator */}
-      <div
-        className="absolute w-12 h-12 transition-all duration-75"
-        style={{
-          left: `${cursorPosition.x}%`,
-          top: `${cursorPosition.y}%`,
-          transform: "translate(-50%, -50%)",
-        }}
+      <Box
+        sx={{ position: 'absolute', width: 48, height: 48, transition: 'all 75ms' }}
+        style={{ left: `${cursorPosition.x}%`, top: `${cursorPosition.y}%`, transform: 'translate(-50%, -50%)' }}
       >
-        <div
-          className={`w-full h-full rounded-full border-3 transition-colors ${
-            isLeftPressed
-              ? "bg-green-500 border-green-400"
+        <Box
+          sx={(theme) => ({
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            border: 3,
+            bgcolor: isLeftPressed
+              ? theme.palette.app?.cursor?.left?.bg ?? theme.palette.success.main
               : isRightPressed
-                ? "bg-purple-500 border-purple-400"
-                : "bg-blue-500/50 border-blue-400"
-          }`}
+              ? theme.palette.app?.cursor?.right?.bg ?? theme.palette.secondary.main
+              : theme.palette.app?.cursor?.default?.bg ?? theme.palette.primary.main,
+            borderColor: isLeftPressed
+              ? theme.palette.app?.cursor?.left?.border ?? theme.palette.success.dark
+              : isRightPressed
+              ? theme.palette.app?.cursor?.right?.border ?? theme.palette.secondary.dark
+              : theme.palette.app?.cursor?.default?.border ?? theme.palette.primary.dark,
+          })}
         />
-      </div>
+      </Box>
 
       {/* Instructions */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-        <Hand className="w-16 h-16 text-slate-500 mx-auto mb-2" />
-        <p className="text-slate-400">Slide to move cursor</p>
-      </div>
-    </div>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+        <TouchAppIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 1 }} />
+        <Box component="p" sx={{ color: 'text.secondary' }}>Slide to move cursor</Box>
+      </Box>
+    </Paper>
   );
 }
