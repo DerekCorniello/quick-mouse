@@ -111,7 +111,6 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 
     <div class="section">
         <h3>Other Packets</h3>
-        <button onclick="sendPacket('keep_alive')">Keep Alive</button>
         <button onclick="sendPacket('unknown_packet')">Unknown Packet (Test Error)</button>
     </div>
 
@@ -130,9 +129,9 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
             socket = new WebSocket('` + wsURL + `');
 
             socket.onopen = function(event) {
-                statusDiv.textContent = 'Connected - Authenticating...';
+                statusDiv.textContent = 'Authenticated';
                 statusDiv.className = 'status connected';
-                addMessage('Connected to WebSocket - sending auth');
+                addMessage('Connected to WebSocket - authenticated');
                 // Send auth packet immediately
                 const authPacket = { type: 'auth', key: key };
                 sendJSON(authPacket);
@@ -140,9 +139,8 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                if (data.status === 'ok') {
-                    statusDiv.textContent = 'Authenticated';
-                    addMessage('Authentication successful');
+                if (data.type === 'keep_alive') {
+                    // Keep-alive from server, no action needed
                 } else {
                     addMessage('Received: ' + event.data);
                 }
@@ -285,7 +283,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// require authentication first
-	mt, message, err := conn.ReadMessage()
+	_, message, err := conn.ReadMessage()
 	if err != nil {
 		log.Println("Error reading first message:", err)
 		return
@@ -323,19 +321,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	if authPacket.Key != authKey {
 		log.Println("Invalid auth key")
 		conn.Close()
-		return
-	}
-
-	// authentication successful, send ack
-	ack := map[string]string{"status": "ok"}
-	response, err := json.Marshal(ack)
-	if err != nil {
-		log.Println("Error marshaling auth ack:", err)
-		return
-	}
-	err = conn.WriteMessage(mt, response)
-	if err != nil {
-		log.Println("Error sending auth ack:", err)
 		return
 	}
 
@@ -381,7 +366,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Now process other packets
 	for {
-		mt, message, err := conn.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading message:", err)
 			break
@@ -393,7 +378,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Printf("Received: %s\n", message)
 
-		// Parse packet type from JSON
+		// parse packet type from JSON
 		if err := json.Unmarshal(message, &envelope); err != nil {
 			log.Println("Error parsing JSON:", err)
 			continue
@@ -404,35 +389,21 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		packetType := envelope.Type
 
-		// Skip auth packets if sent again
+		// skip auth packets if sent again
 		if packetType == server.Auth {
 			continue
 		}
 
-		// Unmarshal the packet
+		// unmarshal the packet
 		packet, err := serializer.Unmarshal(message, packetType)
 		if err != nil {
 			log.Println("Error unmarshaling packet:", err)
 			continue
 		}
 
-		// Process the packet
 		if err := controller.ProcessPacket(packet); err != nil {
 			log.Println("Error processing packet:", err)
 			continue
-		}
-
-		// Send acknowledgment
-		response, err := json.Marshal(ack)
-		if err != nil {
-			log.Println("Error marshaling acknowledgment:", err)
-			continue
-		}
-
-		err = conn.WriteMessage(mt, response)
-		if err != nil {
-			log.Println("Error writing acknowledgment:", err)
-			break
 		}
 	}
 }
