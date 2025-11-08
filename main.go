@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/mdp/qrterminal/v3"
@@ -33,7 +34,6 @@ func getLocalIP() string {
 	}
 	return "localhost"
 }
-
 
 // landingPageHandler serves an HTML page with a WebSocket test client
 func landingPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +111,6 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 
     <div class="section">
         <h3>Other Packets</h3>
-        <button onclick="sendPacket('keep_alive')">Keep Alive</button>
         <button onclick="sendPacket('unknown_packet')">Unknown Packet (Test Error)</button>
     </div>
 
@@ -130,9 +129,9 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
             socket = new WebSocket('` + wsURL + `');
 
             socket.onopen = function(event) {
-                statusDiv.textContent = 'Connected - Authenticating...';
+                statusDiv.textContent = 'Authenticated';
                 statusDiv.className = 'status connected';
-                addMessage('Connected to WebSocket - sending auth');
+                addMessage('Connected to WebSocket - authenticated');
                 // Send auth packet immediately
                 const authPacket = { type: 'auth', key: key };
                 sendJSON(authPacket);
@@ -140,9 +139,8 @@ func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 
             socket.onmessage = function(event) {
                 const data = JSON.parse(event.data);
-                if (data.status === 'ok') {
-                    statusDiv.textContent = 'Authenticated';
-                    addMessage('Authentication successful');
+                if (data.type === 'keep_alive') {
+                    // Keep-alive from server, no action needed
                 } else {
                     addMessage('Received: ' + event.data);
                 }
@@ -251,14 +249,11 @@ func updateDisplay() {
 
 	if connectedClients > 0 {
 		fmt.Println("Status: Device connected")
-		fmt.Println("Server running on :3000")
-		fmt.Println("Press Ctrl+C to exit")
 	} else {
 		localIP := getLocalIP()
 		httpURL := fmt.Sprintf("http://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
 
-		fmt.Println("Scan this QR code to connect:")
-
+		fmt.Print("Scan this QR code to connect:\n\n")
 		qrterminal.GenerateWithConfig(httpURL, qrterminal.Config{
 			Level:     qrterminal.L,
 			Writer:    os.Stdout,
@@ -266,9 +261,7 @@ func updateDisplay() {
 			WhiteChar: qrterminal.WHITE,
 			QuietZone: 0,
 		})
-
-		fmt.Printf("URL: %s\n", httpURL)
-		fmt.Println("Press Ctrl+C to exit")
+		fmt.Println("\nPress Ctrl+C to exit")
 	}
 }
 
@@ -289,15 +282,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		updateDisplay()
 	}()
 
-	// Require authentication first
-	mt, message, err := conn.ReadMessage()
+	// require authentication first
+	_, message, err := conn.ReadMessage()
 	if err != nil {
 		log.Println("Error reading first message:", err)
 		return
 	}
 	fmt.Printf("Received first message: %s\n", message)
 
-	// Parse as auth packet
+	// always parse as auth packet
 	var envelope struct {
 		Type server.PacketType `json:"type"`
 	}
@@ -312,7 +305,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Unmarshal auth packet
+	// unmarshal auth packet
 	packet, err := serializer.Unmarshal(message, server.Auth)
 	if err != nil {
 		log.Println("Error unmarshaling auth packet:", err)
@@ -331,31 +324,61 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authentication successful, send ack
-	ack := map[string]string{"status": "ok"}
-	response, err := json.Marshal(ack)
-	if err != nil {
-		log.Println("Error marshaling auth ack:", err)
-		return
-	}
-	err = conn.WriteMessage(mt, response)
-	if err != nil {
-		log.Println("Error sending auth ack:", err)
-		return
-	}
-
 	log.Println("Client authenticated successfully")
+
+	// start keep-alive mechanism
+	// ws connections typically timeout after 30-120 seconds of inactivity
+	// see https://websockets.readthedocs.io/en/stable/topics/timeouts.html
+	// Gorilla may help maintain connections, but explicit keep-alives ensure compatibility across networks
+	activityChan := make(chan struct{}, 1)
+	keepAliveTimer := time.NewTimer(25 * time.Second)
+	defer keepAliveTimer.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-keepAliveTimer.C:
+				// send keep-alive packet
+				keepAlive := map[string]string{"type": "keep_alive"}
+				response, err := json.Marshal(keepAlive)
+				if err != nil {
+					log.Println("Error marshaling keep-alive:", err)
+					return
+				}
+				err = conn.WriteMessage(websocket.TextMessage, response)
+				if err != nil {
+					log.Println("Error sending keep-alive:", err)
+					return
+				}
+				log.Println("Sent keep-alive packet")
+				keepAliveTimer.Reset(25 * time.Second)
+			case <-activityChan:
+				if !keepAliveTimer.Stop() {
+					select {
+					case <-keepAliveTimer.C:
+					default:
+					}
+				}
+				keepAliveTimer.Reset(25 * time.Second)
+			}
+		}
+	}()
 
 	// Now process other packets
 	for {
-		mt, message, err := conn.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading message:", err)
 			break
 		}
+		// signal activity to reset keep-alive timer
+		select {
+		case activityChan <- struct{}{}:
+		default:
+		}
 		fmt.Printf("Received: %s\n", message)
 
-		// Parse packet type from JSON
+		// parse packet type from JSON
 		if err := json.Unmarshal(message, &envelope); err != nil {
 			log.Println("Error parsing JSON:", err)
 			continue
@@ -366,35 +389,21 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		packetType := envelope.Type
 
-		// Skip auth packets if sent again
+		// skip auth packets if sent again
 		if packetType == server.Auth {
 			continue
 		}
 
-		// Unmarshal the packet
+		// unmarshal the packet
 		packet, err := serializer.Unmarshal(message, packetType)
 		if err != nil {
 			log.Println("Error unmarshaling packet:", err)
 			continue
 		}
 
-		// Process the packet
 		if err := controller.ProcessPacket(packet); err != nil {
 			log.Println("Error processing packet:", err)
 			continue
-		}
-
-		// Send acknowledgment
-		response, err := json.Marshal(ack)
-		if err != nil {
-			log.Println("Error marshaling acknowledgment:", err)
-			continue
-		}
-
-		err = conn.WriteMessage(mt, response)
-		if err != nil {
-			log.Println("Error writing acknowledgment:", err)
-			break
 		}
 	}
 }
@@ -432,8 +441,6 @@ func main() {
 	http.HandleFunc("/", landingPageHandler)
 	http.HandleFunc("/ws", wsHandler)
 	updateDisplay()
-	fmt.Println("WebSocket server started on :3000")
-	fmt.Println("Press Ctrl+C to exit")
 
 	err = http.ListenAndServe(":3000", nil)
 	if err != nil {

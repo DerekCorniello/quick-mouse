@@ -34,11 +34,6 @@ func (c *PacketController) SetControlType(ct ControlType) {
 // this is where network commands become actual cursor movements and button presses
 func (c *PacketController) ProcessPacket(packet Packet) error {
 	switch packet.Type() {
-	case Auth:
-		// auth is handled in wsHandler, just ack
-		log.Println("Auth packet received")
-		return nil
-
 	case MouseMove:
 		p := packet.(*MouseMovePacket)
 		controlType := c.controlType
@@ -87,11 +82,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	case RightClickDown:
 		log.Println("Right click down")
 		return c.mouse.Press("right")
-
-	case KeepAlive:
-		// heartbeat packet to keep ws connection alive
-		log.Println("Keep alive received")
-		return nil
 
 	default:
 		return fmt.Errorf("unknown packet type: %s", packet.Type())
