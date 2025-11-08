@@ -14,6 +14,8 @@ export default function SettingsModal({
   onToggleSensorLog,
   buttonsAboveTouchpad,
   onToggleButtonPosition,
+  isTable,
+  onToggleIsTable,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,6 +25,8 @@ export default function SettingsModal({
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
+  isTable: boolean;
+  onToggleIsTable: () => void;
 }) {
   return (
     <>
@@ -76,6 +80,17 @@ export default function SettingsModal({
               />
             }
             label="Buttons Above Touchpad"
+            sx={{ mt: 1 }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isTable}
+                onChange={onToggleIsTable}
+                color="primary"
+              />
+            }
+            label="Table Mode"
             sx={{ mt: 1 }}
           />
         </DialogContent>

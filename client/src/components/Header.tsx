@@ -14,6 +14,8 @@ export function Header({
   onToggleSensorLog,
   buttonsAboveTouchpad,
   onToggleButtonPosition,
+  isTable,
+  onToggleIsTable,
 }: {
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
@@ -21,6 +23,8 @@ export function Header({
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
+  isTable: boolean;
+  onToggleIsTable: () => void;
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -61,6 +65,8 @@ export function Header({
           onToggleSensorLog={onToggleSensorLog}
           buttonsAboveTouchpad={buttonsAboveTouchpad}
           onToggleButtonPosition={onToggleButtonPosition}
+          isTable={isTable}
+          onToggleIsTable={onToggleIsTable}
         />
       </Toolbar>
     </AppBar>

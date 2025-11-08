@@ -4,7 +4,12 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 
-export function SensorLog() {
+interface SensorLogProps {
+  swipeDirection: string;
+  swipeMagnitude: number;
+}
+
+export function SensorLog({ swipeDirection, swipeMagnitude }: SensorLogProps) {
   const [eventCount, setEventCount] = useState(0);
   const [orientation, setOrientation] = useState({ alpha: 0, beta: 0, gamma: 0 });
   const [acceleration, setAcceleration] = useState({ x: 0, y: 0, z: 0 });
@@ -143,6 +148,14 @@ export function SensorLog() {
             <li>X-axis: <Typography component="span" color="text.primary">{rotationRate.beta.toFixed(10)}</Typography>°/s</li>
             <li>Y-axis: <Typography component="span" color="text.primary">{rotationRate.gamma.toFixed(10)}</Typography>°/s</li>
             <li>Z-axis: <Typography component="span" color="text.primary">{rotationRate.alpha.toFixed(10)}</Typography>°/s</li>
+          </Box>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle1" color="text.primary" sx={{ mb: 1 }}>Touch Swipe</Typography>
+          <Box component="ul" sx={{ color: 'text.secondary', pl: 2, m: 0 }}>
+            <li>Direction: <Typography component="span" color="text.primary">{swipeDirection}</Typography></li>
+            <li>Magnitude: <Typography component="span" color="text.primary">{swipeMagnitude}</Typography></li>
           </Box>
         </Box>
       </Box>

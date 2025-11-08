@@ -17,9 +17,6 @@ interface TouchpadProps {
 export function Touchpad({
   touchpadRef,
   touchActive,
-  cursorPosition,
-  isLeftPressed,
-  isRightPressed,
   onTouchStart,
   onTouchMove,
   onTouchEnd,
@@ -34,34 +31,69 @@ export function Touchpad({
       elevation={0}
       square
       sx={(theme) => ({
-        position: 'relative',
+        position: "relative",
         flex: 1,
+        minHeight: 200,
+        maxHeight: 400,
         borderRadius: 3,
         border: 2,
-        borderColor: touchActive ? theme.palette.app?.cursor?.default?.border ?? theme.palette.primary.main : theme.palette.divider,
-        overflow: 'hidden',
-        bgcolor: 'transparent',
-        touchAction: 'none',
+        borderColor: touchActive
+          ? (theme.palette.app?.cursor?.default?.border ??
+            theme.palette.primary.main)
+          : theme.palette.divider,
+        overflow: "hidden",
+        bgcolor: "transparent",
+        touchAction: "none",
       })}
     >
       {/* Grid Pattern */}
-      <Box sx={{ position: 'absolute', inset: 0, opacity: 0.08, display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gridTemplateRows: 'repeat(8, 1fr)' }}>
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          opacity: 0.08,
+          display: "grid",
+          gridTemplateColumns: "repeat(8, 1fr)",
+          gridTemplateRows: "repeat(8, 1fr)",
+        }}
+      >
         {Array.from({ length: 64 }).map((_, i) => (
-          <Box key={i} sx={(theme) => ({ border: 1, borderColor: theme.palette.app?.grid ?? theme.palette.divider })} />
+          <Box
+            key={i}
+            sx={(theme) => ({
+              border: 1,
+              borderColor: theme.palette.app?.grid ?? theme.palette.divider,
+            })}
+          />
         ))}
       </Box>
 
       {/* Touch Indicator */}
       {touchActive && (
-        <Box sx={(theme) => ({ position: 'absolute', inset: 0, bgcolor: theme.palette.app?.indicator ?? 'rgba(59,130,246,0.08)' })} />
+        <Box
+          sx={(theme) => ({
+            position: "absolute",
+            inset: 0,
+            bgcolor: theme.palette.app?.indicator ?? "rgba(59,130,246,0.08)",
+          })}
+        />
       )}
 
-
-
       {/* Instructions */}
-      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-        <TouchAppIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 1 }} />
-        <Box component="p" sx={{ color: 'text.secondary' }}>Slide to move cursor</Box>
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          textAlign: "center",
+          pointerEvents: "none",
+        }}
+      >
+        <TouchAppIcon sx={{ fontSize: 64, color: "text.secondary", mb: 1 }} />
+        <Box component="p" sx={{ color: "text.secondary" }}>
+          Slide to move cursor
+        </Box>
       </Box>
     </Paper>
   );

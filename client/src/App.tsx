@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Header } from "./components/Header";
 import { MouseButtons } from "./components/MouseButtons";
 import { Touchpad } from "./components/Touchpad";
-import { StatusIndicator } from "./components/StatusIndicator";
+
 import { SensorLog } from "./components/SensorLog";
 
 export default function App() {
@@ -13,7 +13,8 @@ export default function App() {
   const [sensitivity, setSensitivity] = useState(2);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
-  const [swipeDirection, setSwipeDirection] = useState<string>('None');
+  const [isTable, setIsTable] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
@@ -39,14 +40,14 @@ export default function App() {
 
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
       // Horizontal movement is dominant
-      setSwipeDirection(deltaX > 0 ? 'Right' : 'Left');
+      setSwipeDirection(deltaX > 0 ? "Right" : "Left");
     } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
       // Vertical movement is dominant
-      setSwipeDirection(deltaY > 0 ? 'Down' : 'Up');
+      setSwipeDirection(deltaY > 0 ? "Down" : "Up");
     } else {
       // Diagonal movement
-      const horizontal = deltaX > 0 ? 'Right' : 'Left';
-      const vertical = deltaY > 0 ? 'Down' : 'Up';
+      const horizontal = deltaX > 0 ? "Right" : "Left";
+      const vertical = deltaY > 0 ? "Down" : "Up";
       setSwipeDirection(`${vertical}-${horizontal}`);
     }
 
@@ -61,7 +62,7 @@ export default function App() {
   const handleTouchEnd = () => {
     lastTouchRef.current = null;
     setTouchActive(false);
-    setSwipeDirection('None');
+    setSwipeDirection("None");
     setSwipeMagnitude(0);
   };
 
@@ -89,7 +90,11 @@ export default function App() {
         showSensorLog={showSensorLog}
         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
         buttonsAboveTouchpad={buttonsAboveTouchpad}
-        onToggleButtonPosition={() => setButtonsAboveTouchpad(!buttonsAboveTouchpad)}
+        onToggleButtonPosition={() =>
+          setButtonsAboveTouchpad(!buttonsAboveTouchpad)
+        }
+        isTable={isTable}
+        onToggleIsTable={() => setIsTable(!isTable)}
       />
 
       <main
@@ -98,6 +103,7 @@ export default function App() {
           flexDirection: "column",
           minHeight: "100vh",
           gap: 16,
+          position: "relative",
         }}
       >
         {buttonsAboveTouchpad && (
@@ -135,23 +141,21 @@ export default function App() {
         </div>
 
         {!buttonsAboveTouchpad && (
-          <div>
-            <MouseButtons
-              isLeftPressed={isLeftPressed}
-              isRightPressed={isRightPressed}
-              onLeftTouchStart={handleLeftTouchStart}
-              onLeftTouchEnd={handleLeftTouchEnd}
-              onRightTouchStart={handleRightTouchStart}
-              onRightTouchEnd={handleRightTouchEnd}
-            />
-          </div>
+          <MouseButtons
+            isLeftPressed={isLeftPressed}
+            isRightPressed={isRightPressed}
+            onLeftTouchStart={handleLeftTouchStart}
+            onLeftTouchEnd={handleLeftTouchEnd}
+            onRightTouchStart={handleRightTouchStart}
+            onRightTouchEnd={handleRightTouchEnd}
+          />
         )}
 
-        <StatusIndicator swipeDirection={swipeDirection} swipeMagnitude={swipeMagnitude} />
         {showSensorLog && (
-          <div style={{ padding: 16 }}>
-            <SensorLog />
-          </div>
+          <SensorLog
+            swipeDirection={swipeDirection}
+            swipeMagnitude={swipeMagnitude}
+          />
         )}
       </main>
     </div>
