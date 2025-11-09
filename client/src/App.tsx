@@ -68,7 +68,6 @@ export default function App() {
         setCalibrationStarted(false);
         setCalibrationComplete(false);
     }, []);
-    const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
     const initialTouchesRef = useRef<{ id: number, x: number, y: number }[]>([]);
     const touchpadRef = useRef<HTMLDivElement>(null);
 
@@ -404,10 +403,6 @@ export default function App() {
             return () => clearTimeout(timer);
         }
     }, [calibrationComplete]);
-
-
-
-
 
     const handleTouchStart = (e: React.TouchEvent) => {
         e.preventDefault();
