@@ -23,6 +23,15 @@ export default function App() {
   const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
+  const isPausedRef = useRef(false);
+
+  const handlePause = useCallback(() => {
+    isPausedRef.current = true;
+  }, []);
+
+  const handleResume = useCallback(() => {
+    isPausedRef.current = false;
+  }, []);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
@@ -101,6 +110,9 @@ export default function App() {
 
   const sendPacket = useCallback(
     (packet: Packet) => {
+      if (isPausedRef.current) {
+        return;
+      }
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
           // Validate packet data before sending
@@ -479,6 +491,8 @@ export default function App() {
           setSwapLeftRightClick(!swapLeftRightClick)
         }
         connectionStatus={connectionStatus}
+        onPause={handlePause}
+        onResume={handleResume}
       />
 
       <main

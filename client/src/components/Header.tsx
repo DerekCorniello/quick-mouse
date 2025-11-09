@@ -11,6 +11,8 @@ import ErrorIcon from "@mui/icons-material/Error";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import SettingsModal from "./SettingsModal";
+import PauseModal from "./PauseModal";
+import PauseIcon from "@mui/icons-material/Pause";
 
 interface HeaderProps {
   pointerSensitivity: number;
@@ -27,6 +29,8 @@ interface HeaderProps {
   onToggleNaturalScroll: () => void;
   onToggleSwapLeftRightClick: () => void;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
+  onPause: () => void;
+  onResume: () => void;
 }
 
 export function Header({
@@ -44,8 +48,11 @@ export function Header({
   onToggleNaturalScroll,
   onToggleSwapLeftRightClick,
   connectionStatus,
+  onPause,
+  onResume,
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
 
   const handleSettingsOpen = () => {
     setSettingsOpen(true);
@@ -53,6 +60,16 @@ export function Header({
 
   const handleSettingsClose = () => {
     setSettingsOpen(false);
+  };
+
+  const handlePauseOpen = () => {
+    setPauseOpen(true);
+    onPause();
+  };
+
+  const handlePauseClose = () => {
+    setPauseOpen(false);
+    onResume();
   };
 
   return (
@@ -84,6 +101,15 @@ export function Header({
         <IconButton
           edge="end"
           color="inherit"
+          aria-label="pause"
+          onClick={handlePauseOpen}
+          sx={{ mr: 1 }}
+        >
+          <PauseIcon />
+        </IconButton>
+        <IconButton
+          edge="end"
+          color="inherit"
           aria-label="settings"
           onClick={handleSettingsOpen}
         >
@@ -104,8 +130,9 @@ export function Header({
           onToggleIsTable={onToggleIsTable}
           naturalScroll={naturalScroll}
           onToggleNaturalScroll={onToggleNaturalScroll}
-           onToggleSwapLeftRightClick={onToggleSwapLeftRightClick}
+          onToggleSwapLeftRightClick={onToggleSwapLeftRightClick}
         />
+        <PauseModal open={pauseOpen} onClose={handlePauseClose} />
       </Toolbar>
     </AppBar>
   );
