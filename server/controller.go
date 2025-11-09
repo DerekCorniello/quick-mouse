@@ -27,6 +27,23 @@ type PacketController struct {
 	rotDeadzone   float64
 	isRunning     bool
 	stopPhysics   chan struct{}
+
+	// Calibration baselines
+	baselineAccelX   float64
+	baselineAccelY   float64
+	baselineAccelZ   float64
+	baselineRotAlpha float64
+	baselineRotBeta  float64
+	baselineRotGamma float64
+
+	// Calibration accumulators
+	sumAccelX        float64
+	sumAccelY        float64
+	sumAccelZ        float64
+	sumRotAlpha      float64
+	sumRotBeta       float64
+	sumRotGamma      float64
+	calibrationCount int
 }
 
 // initializes the packet controller with a mouse backend
@@ -38,15 +55,28 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 	}
 
 	controller := &PacketController{
-		mouse:         mouse,
-		controlType:   Flat,  // Start in Flat mode to match client default
-		sensitivity:   1.2,   // Higher sensitivity for adaptive control
-		friction:      0.95,  // Reduced friction for better momentum (5% loss)
-		maxVelocity:   150.0, // Higher velocity cap for more speed
-		accelDeadzone: 0.05,  // Minimum acceleration to process
-		rotDeadzone:   0.1,   // Minimum rotation rate to process
-		stopPhysics:   make(chan struct{}),
-		lastUpdate:    time.Now(),
+		mouse:            mouse,
+		controlType:      Flat,  // Start in Flat mode to match client default
+		sensitivity:      3.0,   // Much higher sensitivity for motion control
+		friction:         0.98,  // Minimal friction for motion momentum (2% loss)
+		maxVelocity:      150.0, // Higher velocity cap for more speed
+		accelDeadzone:    0.3,   // Higher deadzone for motion control noise
+		rotDeadzone:      0.1,   // Minimum rotation rate to process
+		stopPhysics:      make(chan struct{}),
+		lastUpdate:       time.Now(),
+		baselineAccelX:   0.0,
+		baselineAccelY:   0.0,
+		baselineAccelZ:   0.0,
+		baselineRotAlpha: 0.0,
+		baselineRotBeta:  0.0,
+		baselineRotGamma: 0.0,
+		sumAccelX:        0.0,
+		sumAccelY:        0.0,
+		sumAccelZ:        0.0,
+		sumRotAlpha:      0.0,
+		sumRotBeta:       0.0,
+		sumRotGamma:      0.0,
+		calibrationCount: 0,
 	}
 
 	// Start physics update loop
@@ -117,8 +147,8 @@ func (c *PacketController) updatePhysics() {
 	}
 
 	// Convert velocity to mouse movement
-	deltaX := int32(c.velocityX * 6.0) // Further increased for adaptive control
-	deltaY := int32(c.velocityY * 6.0)
+	deltaX := int32(c.velocityX * 15.0) // Much higher scaling for motion control
+	deltaY := int32(c.velocityY * 15.0)
 
 	// Only move if there's meaningful velocity
 	if deltaX != 0 || deltaY != 0 {
@@ -135,6 +165,14 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
 
+	// Subtract calibration baselines
+	accelX -= c.baselineAccelX
+	accelY -= c.baselineAccelY
+	accelZ -= c.baselineAccelZ
+	rotAlpha -= c.baselineRotAlpha
+	rotBeta -= c.baselineRotBeta
+	rotGamma -= c.baselineRotGamma
+
 	if c.controlType == Flat {
 		// Only apply acceleration if:
 		// 1. Velocity is near zero (starting from rest), OR
@@ -148,9 +186,9 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			dt = 0.016
 		}
 
-		// Adaptive commitment thresholds for better reactivity
-		const lowVelocityThreshold = 0.2  // Allow reversals when slow
-		const highVelocityThreshold = 2.0 // Strong commitment when fast
+		// Adaptive commitment thresholds tuned for motion control
+		const lowVelocityThreshold = 1.0  // Higher threshold for motion velocities
+		const highVelocityThreshold = 8.0 // Much higher for strong motion commitment
 
 		// Handle X axis (accelX controls X movement - horizontal mouse)
 		if math.Abs(accelX) > c.accelDeadzone {
@@ -169,7 +207,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			// High velocity + opposite direction: maintain commitment (no acceleration)
 
 			if shouldAccelerate {
-				c.velocityX += -accelX * sensitivity * dt * 180 // Use client sensitivity for table mode
+				c.velocityX += -accelX * c.sensitivity * dt * 50 // Tuned scaling for motion control
 			}
 		}
 
@@ -186,7 +224,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			}
 
 			if shouldAccelerate {
-				c.velocityY += accelY * sensitivity * dt * 180 // Use client sensitivity for table mode
+				c.velocityY += accelY * c.sensitivity * dt * 50 // Tuned scaling for motion control
 			}
 		}
 
@@ -280,6 +318,40 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	case RightClickDown:
 		log.Println("Right click down")
 		return c.mouse.Press("right")
+
+	case Calibration:
+		p := packet.(*CalibrationPacket)
+		c.sumAccelX += p.AccelX
+		c.sumAccelY += p.AccelY
+		c.sumAccelZ += p.AccelZ
+		c.sumRotAlpha += p.RotAlpha
+		c.sumRotBeta += p.RotBeta
+		c.sumRotGamma += p.RotGamma
+		c.calibrationCount++
+		log.Printf("Calibration sample: count=%d, accel=(%.2f, %.2f, %.2f), rot=(%.2f, %.2f, %.2f)", c.calibrationCount, p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
+		return nil
+
+	case CalibrationDone:
+		if c.calibrationCount > 0 {
+			c.baselineAccelX = c.sumAccelX / float64(c.calibrationCount)
+			c.baselineAccelY = c.sumAccelY / float64(c.calibrationCount)
+			c.baselineAccelZ = c.sumAccelZ / float64(c.calibrationCount)
+			c.baselineRotAlpha = c.sumRotAlpha / float64(c.calibrationCount)
+			c.baselineRotBeta = c.sumRotBeta / float64(c.calibrationCount)
+			c.baselineRotGamma = c.sumRotGamma / float64(c.calibrationCount)
+			log.Printf("Calibration done: baselines set from %d samples", c.calibrationCount)
+		} else {
+			log.Println("Calibration done: no samples collected, baselines remain 0")
+		}
+		// Reset accumulators
+		c.sumAccelX = 0.0
+		c.sumAccelY = 0.0
+		c.sumAccelZ = 0.0
+		c.sumRotAlpha = 0.0
+		c.sumRotBeta = 0.0
+		c.sumRotGamma = 0.0
+		c.calibrationCount = 0
+		return nil
 
 	default:
 		return fmt.Errorf("unknown packet type: %s", packet.Type())

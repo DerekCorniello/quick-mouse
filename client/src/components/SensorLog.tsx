@@ -7,9 +7,10 @@ import Box from "@mui/material/Box";
 interface SensorLogProps {
   swipeDirection: string;
   swipeMagnitude: number;
+  onPermissionsGranted?: () => void;
 }
 
-export function SensorLog({ swipeDirection, swipeMagnitude }: SensorLogProps) {
+export function SensorLog({ swipeDirection, swipeMagnitude, onPermissionsGranted }: SensorLogProps) {
   const [eventCount, setEventCount] = useState(0);
   const [orientation, setOrientation] = useState({
     alpha: 0,
@@ -103,6 +104,7 @@ export function SensorLog({ swipeDirection, swipeMagnitude }: SensorLogProps) {
         window.addEventListener("devicemotion", handleMotion);
         window.addEventListener("deviceorientation", handleOrientation);
         setIsRunning(true);
+        onPermissionsGranted?.();
       }
     }
   };

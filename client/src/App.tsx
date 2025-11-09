@@ -4,10 +4,7 @@ import { MouseButtons } from "./components/MouseButtons";
 import { Touchpad } from "./components/Touchpad";
 import { SensorLog } from "./components/SensorLog";
 import { PermissionPrompt } from "./components/PermissionPrompt";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
+import { CalibrationDialog } from "./components/CalibrationDialog";
 
 export default function App() {
   const [cursorPosition, setCursorPosition] = useState({ x: 50, y: 50 });
@@ -34,6 +31,9 @@ export default function App() {
   const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
+  const calibrationCountRef = useRef(0);
+  const [calibrationStarted, setCalibrationStarted] = useState(false);
+  const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
 
   const handlePause = useCallback(() => {
@@ -43,14 +43,36 @@ export default function App() {
   const handleResume = useCallback(() => {
     isPausedRef.current = false;
   }, []);
-  const initialTouchesRef = useRef<{id: number, x: number, y: number}[]>([]);
+  const initialTouchesRef = useRef<{ id: number; x: number; y: number }[]>([]);
+
+  const handleCalibrationComplete = useCallback(() => {
+    setAppPhase("main");
+  }, []);
+
+  const handleStartCalibration = useCallback(() => {
+    setCalibrationStarted(true);
+  }, []);
+
+  const handleRecalibrate = useCallback(() => {
+    setAppPhase("calibrating");
+    calibrationCountRef.current = 0;
+    setCalibrationStarted(false);
+    setCalibrationComplete(false);
+  }, []);
+
+  const handlePermissionsGranted = useCallback(() => {
+    setAppPhase("calibrating");
+    calibrationCountRef.current = 0;
+    setCalibrationStarted(false);
+    setCalibrationComplete(false);
+  }, []);
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
-  // Sensor permission state
-  const [permissionState, setPermissionState] = useState<
-    "checking" | "prompt" | "requesting" | "granted" | "denied"
-  >("checking");
-  const PERMISSION_STORAGE_KEY = "device-motion-permission";
+  // App phase
+  const [appPhase, setAppPhase] = useState<
+    "permissions" | "calibrating" | "main"
+  >("permissions");
 
   // WebSocket connection state
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -212,7 +234,10 @@ export default function App() {
               isNaN(packet.sensitivity) ||
               packet.sensitivity < 0)
           ) {
-            console.error("Invalid packet sensitivity value:", packet.sensitivity);
+            console.error(
+              "Invalid packet sensitivity value:",
+              packet.sensitivity,
+            );
             return;
           }
 
@@ -239,15 +264,14 @@ export default function App() {
   // Device motion handlers
   const handleDeviceMotion = useCallback(
     (event: DeviceMotionEvent) => {
-      if (permissionState !== "granted") {
-        console.log("Device motion event received but permissions not granted");
+      if (appPhase === "permissions") {
         return;
       }
 
-      const acceleration = event.acceleration;
+      const acceleration =
+        event.acceleration || event.accelerationIncludingGravity;
       const movement = event.rotationRate;
       if (!acceleration) {
-        console.log("No acceleration data in device motion event");
         return;
       }
 
@@ -261,25 +285,29 @@ export default function App() {
       const rotBeta = Number(movement?.beta) || 0;
       const rotGamma = Number(movement?.gamma) || 0;
 
-      console.log("Device motion event:", {
-        accelX,
-        accelY,
-        accelZ,
-        rotAlpha,
-        rotBeta,
-        rotGamma,
-        permissionState,
-      });
-
-      // Always send packets for debugging, even if below deadzone
-      console.log("Sending device_motion packet:", {
-        accelX,
-        accelY,
-        accelZ,
-        rotAlpha,
-        rotBeta,
-        rotGamma,
-      });
+      if (
+        appPhase === "calibrating" &&
+        calibrationStarted &&
+        !calibrationComplete
+      ) {
+        // Send calibration packet
+        sendPacket({
+          type: "calibration",
+          accel_x: accelX,
+          accel_y: accelY,
+          accel_z: accelZ,
+          rot_alpha: rotAlpha,
+          rot_beta: rotBeta,
+          rot_gamma: rotGamma,
+          timestamp: Date.now(),
+        });
+        calibrationCountRef.current += 1;
+        if (calibrationCountRef.current >= 100) {
+          sendPacket({ type: "calibration_done" });
+          setCalibrationComplete(true);
+        }
+      } else if (appPhase === "main") {
+        // Send normal device_motion packet
         sendPacket({
           type: "device_motion",
           accel_x: accelX,
@@ -291,14 +319,17 @@ export default function App() {
           timestamp: Date.now(),
           sensitivity: pointerSensitivityRef.current,
         });
+      }
     },
-    [permissionState, sendPacket],
+    [appPhase, sendPacket, calibrationStarted, calibrationComplete],
   );
 
   // User-initiated permission request
-  const requestMotionPermissions = async () => {
-    setPermissionState("requesting");
+  const requestMotionPermissions = useCallback(async () => {
     try {
+      let motionGranted = false;
+
+      // Request device motion permission
       if (
         typeof DeviceMotionEvent !== "undefined" &&
         typeof (
@@ -312,27 +343,16 @@ export default function App() {
             requestPermission?: () => Promise<PermissionState>;
           }
         ).requestPermission!();
+        motionGranted = result === "granted";
+      }
 
-        if (result === "granted") {
-          setPermissionState("granted");
-          localStorage.setItem(PERMISSION_STORAGE_KEY, "granted");
-          window.addEventListener("devicemotion", handleDeviceMotion);
-        } else {
-          setPermissionState("denied");
-          localStorage.setItem(PERMISSION_STORAGE_KEY, "denied");
-        }
-      } else {
-        // Fallback for browsers that don't require permission
-        setPermissionState("granted");
-        localStorage.setItem(PERMISSION_STORAGE_KEY, "granted");
-        window.addEventListener("devicemotion", handleDeviceMotion);
+      if (motionGranted) {
+        handlePermissionsGranted();
       }
     } catch (error) {
       console.error("Failed to get sensor permissions:", error);
-      setPermissionState("denied");
-      localStorage.setItem(PERMISSION_STORAGE_KEY, "denied");
     }
-  };
+  }, [handlePermissionsGranted]);
 
   // WebSocket connection management
   useEffect(() => {
@@ -371,31 +391,35 @@ export default function App() {
     return () => clearInterval(healthCheck);
   }, [lastMessageTime, connectionStatus, authKey, connectWebSocket]);
 
-  // Check sensor permissions on mount
+  // Add device motion listener on mount
   useEffect(() => {
-    const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
-    if (stored === "granted") {
-      setPermissionState("granted");
-      // Start listening immediately if previously granted
-      if (typeof DeviceMotionEvent !== "undefined") {
-        window.addEventListener("devicemotion", handleDeviceMotion);
-      }
-    } else if (stored === "denied") {
-      setPermissionState("denied");
-    } else {
-      // First time user
-      setPermissionState("prompt");
+    if (typeof DeviceMotionEvent !== "undefined") {
+      window.addEventListener("devicemotion", handleDeviceMotion);
     }
+    return () => {
+      window.removeEventListener("devicemotion", handleDeviceMotion);
+    };
   }, [handleDeviceMotion]);
+
+  // Handle calibration completion delay
+  useEffect(() => {
+    if (calibrationComplete) {
+      const timer = setTimeout(() => {
+        setAppPhase("main");
+        setCalibrationComplete(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [calibrationComplete]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (permissionState !== "granted") return;
+    if (appPhase !== "main") return;
 
-    initialTouchesRef.current = Array.from(e.touches).map(touch => ({
+    initialTouchesRef.current = Array.from(e.touches).map((touch) => ({
       id: touch.identifier,
       x: touch.clientX,
-      y: touch.clientY
+      y: touch.clientY,
     }));
     setTouchActive(true);
   };
@@ -404,14 +428,16 @@ export default function App() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (initialTouchesRef.current.length === 0 || permissionState !== "granted") return;
+    if (!lastTouchRef.current || appPhase !== "main") return;
 
     const currentTouches = Array.from(e.touches);
 
     if (currentTouches.length === 1) {
       // Mouse control
       const touch = currentTouches[0];
-      const initial = initialTouchesRef.current.find(t => t.id === touch.identifier);
+      const initial = initialTouchesRef.current.find(
+        (t) => t.id === touch.identifier,
+      );
       if (!initial) return;
 
       const rawDeltaX = touch.clientX - initial.x;
@@ -436,11 +462,12 @@ export default function App() {
         x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
         y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
       }));
-
     } else if (currentTouches.length >= 2) {
       // Scroll
       const touch = currentTouches[0];
-      const initial = initialTouchesRef.current.find(t => t.id === touch.identifier);
+      const initial = initialTouchesRef.current.find(
+        (t) => t.id === touch.identifier,
+      );
       if (!initial) return;
 
       const rawDeltaX = touch.clientX - initial.x;
@@ -496,7 +523,7 @@ export default function App() {
   };
 
   const handleLeftTouchStart = () => {
-    if (permissionState !== "granted") return;
+    if (appPhase !== "main") return;
     setIsLeftPressed(true);
     sendPacket({
       type: swapLeftRightClick ? "right_click_down" : "left_click_down",
@@ -504,7 +531,7 @@ export default function App() {
   };
 
   const handleLeftTouchEnd = () => {
-    if (permissionState !== "granted") return;
+    if (appPhase !== "main") return;
     setIsLeftPressed(false);
     sendPacket({
       type: swapLeftRightClick ? "right_click_up" : "left_click_up",
@@ -512,7 +539,7 @@ export default function App() {
   };
 
   const handleRightTouchStart = () => {
-    if (permissionState !== "granted") return;
+    if (appPhase !== "main") return;
     setIsRightPressed(true);
     sendPacket({
       type: swapLeftRightClick ? "left_click_down" : "right_click_down",
@@ -520,7 +547,7 @@ export default function App() {
   };
 
   const handleRightTouchEnd = () => {
-    if (permissionState !== "granted") return;
+    if (appPhase !== "main") return;
     setIsRightPressed(false);
     sendPacket({
       type: swapLeftRightClick ? "left_click_up" : "right_click_up",
@@ -553,6 +580,7 @@ export default function App() {
         connectionStatus={connectionStatus}
         onPause={handlePause}
         onResume={handleResume}
+        onRecalibrate={handleRecalibrate}
       />
 
       <main
@@ -596,7 +624,7 @@ export default function App() {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            permissionState={permissionState}
+            permissionState={appPhase === "main" ? "granted" : "denied"}
           />
           {!buttonsAboveTouchpad && (
             <MouseButtons
@@ -619,69 +647,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Permission UI Overlays */}
-      {permissionState === "checking" && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            textAlign: "center",
-            zIndex: 1000,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
-
-      {(permissionState === "prompt" || permissionState === "requesting") && (
+      {appPhase === "permissions" && (
         <PermissionPrompt
           onRequestPermissions={requestMotionPermissions}
-          isRequesting={permissionState === "requesting"}
+          isRequesting={false}
         />
       )}
 
-      {permissionState === "denied" && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            textAlign: "center",
-            p: 4,
-            bgcolor: "background.paper",
-            borderRadius: 3,
-            boxShadow: 3,
-            zIndex: 1000,
-            minWidth: 350,
-          }}
-        >
-          <Typography variant="h5" color="error.main" sx={{ mb: 2 }}>
-            Motion Permissions Required
-          </Typography>
-          <Typography sx={{ mb: 3, color: "text.secondary" }}>
-            Device motion permissions are needed to control the mouse cursor.
-            Please enable them in your browser settings or try again.
-          </Typography>
-          <Button
-            variant="outlined"
-            onClick={() => setPermissionState("prompt")}
-            sx={{ mr: 2 }}
-          >
-            Try Again
-          </Button>
-          <Button
-            variant="text"
-            onClick={() => {
-              localStorage.removeItem(PERMISSION_STORAGE_KEY);
-              setPermissionState("prompt");
-            }}
-          >
-            Reset Settings
-          </Button>
-        </Box>
+      {appPhase === "calibrating" && (
+        <CalibrationDialog
+          onCalibrationComplete={handleCalibrationComplete}
+          onStartCalibration={handleStartCalibration}
+        />
       )}
     </div>
   );

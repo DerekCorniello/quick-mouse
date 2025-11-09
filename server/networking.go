@@ -26,16 +26,18 @@ type PacketType string
 //
 //	presentation mode and whatnot
 const (
-	Auth           PacketType = "auth"
-	MouseMove      PacketType = "mouse_move"
-	DeviceMotion   PacketType = "device_motion"
-	LeftClickUp    PacketType = "left_click_up"
-	RightClickUp   PacketType = "right_click_up"
-	LeftClickDown  PacketType = "left_click_down"
-	RightClickDown PacketType = "right_click_down"
-	ScrollMove     PacketType = "scroll_move"
-	SwitchMode     PacketType = "switch_mode"
-	KeepAlive      PacketType = "keep_alive"
+	Auth            PacketType = "auth"
+	MouseMove       PacketType = "mouse_move"
+	DeviceMotion    PacketType = "device_motion"
+	LeftClickUp     PacketType = "left_click_up"
+	RightClickUp    PacketType = "right_click_up"
+	LeftClickDown   PacketType = "left_click_down"
+	RightClickDown  PacketType = "right_click_down"
+	ScrollMove      PacketType = "scroll_move"
+	SwitchMode      PacketType = "switch_mode"
+	KeepAlive       PacketType = "keep_alive"
+	Calibration     PacketType = "calibration"
+	CalibrationDone PacketType = "calibration_done"
 )
 
 // ControlType represents different mouse control modes
@@ -48,16 +50,18 @@ const (
 
 // Packet registry for type reconstruction
 var packetRegistry = map[PacketType]func() Packet{
-	Auth:           func() Packet { return &AuthPacket{} },
-	MouseMove:      func() Packet { return &MouseMovePacket{} },
-	DeviceMotion:   func() Packet { return &DeviceMotionPacket{} },
-	LeftClickUp:    func() Packet { return &LeftClickUpPacket{} },
-	RightClickUp:   func() Packet { return &RightClickUpPacket{} },
-	LeftClickDown:  func() Packet { return &LeftClickDownPacket{} },
-	RightClickDown: func() Packet { return &RightClickDownPacket{} },
-	ScrollMove:     func() Packet { return &ScrollMovePacket{} },
-	SwitchMode:     func() Packet { return &SwitchModePacket{} },
-	KeepAlive:      func() Packet { return &KeepAlivePacket{} },
+	Auth:            func() Packet { return &AuthPacket{} },
+	MouseMove:       func() Packet { return &MouseMovePacket{} },
+	DeviceMotion:    func() Packet { return &DeviceMotionPacket{} },
+	LeftClickUp:     func() Packet { return &LeftClickUpPacket{} },
+	RightClickUp:    func() Packet { return &RightClickUpPacket{} },
+	LeftClickDown:   func() Packet { return &LeftClickDownPacket{} },
+	RightClickDown:  func() Packet { return &RightClickDownPacket{} },
+	ScrollMove:      func() Packet { return &ScrollMovePacket{} },
+	SwitchMode:      func() Packet { return &SwitchModePacket{} },
+	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
+	Calibration:     func() Packet { return &CalibrationPacket{} },
+	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
 }
 
 // represents a network packet that can be serialized
@@ -145,6 +149,26 @@ type KeepAlivePacket struct{}
 
 func (p KeepAlivePacket) Type() PacketType {
 	return KeepAlive
+}
+
+type CalibrationPacket struct {
+	AccelX    float64 `json:"accel_x"`
+	AccelY    float64 `json:"accel_y"`
+	AccelZ    float64 `json:"accel_z"`
+	RotAlpha  float64 `json:"rot_alpha"`
+	RotBeta   float64 `json:"rot_beta"`
+	RotGamma  float64 `json:"rot_gamma"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+func (p CalibrationPacket) Type() PacketType {
+	return Calibration
+}
+
+type CalibrationDonePacket struct{}
+
+func (p CalibrationDonePacket) Type() PacketType {
+	return CalibrationDone
 }
 
 // this interface will handle marshaling/unmarshaling packets
