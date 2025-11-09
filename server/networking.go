@@ -34,18 +34,9 @@ const (
 	LeftClickDown   PacketType = "left_click_down"
 	RightClickDown  PacketType = "right_click_down"
 	ScrollMove      PacketType = "scroll_move"
-	SwitchMode      PacketType = "switch_mode"
 	KeepAlive       PacketType = "keep_alive"
 	Calibration     PacketType = "calibration"
 	CalibrationDone PacketType = "calibration_done"
-)
-
-// ControlType represents different mouse control modes
-type ControlType int
-
-const (
-	Flat   ControlType = 0
-	Remote ControlType = 1
 )
 
 // Packet registry for type reconstruction
@@ -58,7 +49,6 @@ var packetRegistry = map[PacketType]func() Packet{
 	LeftClickDown:   func() Packet { return &LeftClickDownPacket{} },
 	RightClickDown:  func() Packet { return &RightClickDownPacket{} },
 	ScrollMove:      func() Packet { return &ScrollMovePacket{} },
-	SwitchMode:      func() Packet { return &SwitchModePacket{} },
 	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
 	Calibration:     func() Packet { return &CalibrationPacket{} },
 	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
@@ -79,9 +69,8 @@ func (p AuthPacket) Type() PacketType {
 }
 
 type MouseMovePacket struct {
-	DeltaX      int32       `json:"x"`
-	DeltaY      int32       `json:"y"`
-	ControlType ControlType `json:"control_type,omitempty"` // optional override
+	DeltaX int32 `json:"x"`
+	DeltaY int32 `json:"y"`
 }
 
 func (p MouseMovePacket) Type() PacketType {
@@ -89,9 +78,6 @@ func (p MouseMovePacket) Type() PacketType {
 }
 
 type DeviceMotionPacket struct {
-	AccelX    float64 `json:"accel_x"`
-	AccelY    float64 `json:"accel_y"`
-	AccelZ    float64 `json:"accel_z"`
 	RotAlpha  float64 `json:"rot_alpha"`
 	RotBeta   float64 `json:"rot_beta"`
 	RotGamma  float64 `json:"rot_gamma"`
@@ -136,12 +122,6 @@ func (p RightClickDownPacket) Type() PacketType {
 	return RightClickDown
 }
 
-type SwitchModePacket struct{}
-
-func (p SwitchModePacket) Type() PacketType {
-	return SwitchMode
-}
-
 type KeepAlivePacket struct{}
 
 func (p KeepAlivePacket) Type() PacketType {
@@ -149,9 +129,6 @@ func (p KeepAlivePacket) Type() PacketType {
 }
 
 type CalibrationPacket struct {
-	AccelX    float64 `json:"accel_x"`
-	AccelY    float64 `json:"accel_y"`
-	AccelZ    float64 `json:"accel_z"`
 	RotAlpha  float64 `json:"rot_alpha"`
 	RotBeta   float64 `json:"rot_beta"`
 	RotGamma  float64 `json:"rot_gamma"`

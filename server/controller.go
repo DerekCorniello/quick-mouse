@@ -11,34 +11,26 @@ import (
 // takes incoming packets from the websocket and translates them
 // into actual mouse stuff it acts as the bridge between network messages and system input.
 type PacketController struct {
-	mouse       *UniversalMouse
-	controlType ControlType
+	mouse *UniversalMouse
 
 	// physics state for device motion integration
-	physicsMu     sync.RWMutex
-	velocityX     float64
-	velocityY     float64
-	lastUpdate    time.Time
-	sensitivity   float64
-	friction      float64
-	maxVelocity   float64
-	accelDeadzone float64
-	rotDeadzone   float64
-	isRunning     bool
-	stopPhysics   chan struct{}
+	physicsMu   sync.RWMutex
+	velocityX   float64
+	velocityY   float64
+	lastUpdate  time.Time
+	sensitivity float64
+	friction    float64
+	maxVelocity float64
+	rotDeadzone float64
+	isRunning   bool
+	stopPhysics chan struct{}
 
 	// calibration baselines
-	baselineAccelX   float64
-	baselineAccelY   float64
-	baselineAccelZ   float64
 	baselineRotAlpha float64
 	baselineRotBeta  float64
 	baselineRotGamma float64
 
 	// calibration accumulators
-	sumAccelX        float64
-	sumAccelY        float64
-	sumAccelZ        float64
 	sumRotAlpha      float64
 	sumRotBeta       float64
 	sumRotGamma      float64
@@ -47,7 +39,7 @@ type PacketController struct {
 
 // initializes the packet controller with a mouse backend
 // detects the display server and sets up the appropriate mouse control system automatically.
-func NewPacketController(defaultMode ControlType) (*PacketController, error) {
+func NewPacketController() (*PacketController, error) {
 	mouse, err := NewUniversalMouse()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize mouse: %v", err)
@@ -55,23 +47,15 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 
 	controller := &PacketController{
 		mouse:            mouse,
-		controlType:      Flat,
 		sensitivity:      3.0,
 		friction:         0.98,
 		maxVelocity:      150.0,
-		accelDeadzone:    0.3,
 		rotDeadzone:      0.1,
 		stopPhysics:      make(chan struct{}),
 		lastUpdate:       time.Now(),
-		baselineAccelX:   0.0,
-		baselineAccelY:   0.0,
-		baselineAccelZ:   0.0,
 		baselineRotAlpha: 0.0,
 		baselineRotBeta:  0.0,
 		baselineRotGamma: 0.0,
-		sumAccelX:        0.0,
-		sumAccelY:        0.0,
-		sumAccelZ:        0.0,
 		sumRotAlpha:      0.0,
 		sumRotBeta:       0.0,
 		sumRotGamma:      0.0,
@@ -158,91 +142,24 @@ func (c *PacketController) updatePhysics() {
 	}
 }
 
-// updates velocity based on device acceleration or rotation depending on control mode
-func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma float64) {
+// updates velocity based on device rotation
+func (c *PacketController) updateMotion(rotAlpha, rotBeta, rotGamma float64) {
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
 
 	// subtract calibration baselines
-	accelX -= c.baselineAccelX
-	accelY -= c.baselineAccelY
-	accelZ -= c.baselineAccelZ
 	rotAlpha -= c.baselineRotAlpha
 	rotBeta -= c.baselineRotBeta
 	rotGamma -= c.baselineRotGamma
 
-	if c.controlType == Flat {
-		// only apply acceleration if:
-		//
-		//    Velocity is near zero (starting from rest)
-		//                           OR
-		//    Acceleration is in the same direction as current velocity
-		//
-		// This prevents deceleration from reversing direction
-
-		// calculate dt for proper time integration
-		dt := time.Since(c.lastUpdate).Seconds()
-		c.lastUpdate = time.Now()
-
-		// cap dt to prevent large jump
-		if dt > 0.1 {
-			dt = 0.016
-		}
-
-		const lowVelocityThreshold = 1.0
-		const highVelocityThreshold = 8.0
-
-		if math.Abs(accelX) > c.accelDeadzone {
-			shouldAccelerate := false
-
-			if math.Abs(c.velocityX) < lowVelocityThreshold {
-				shouldAccelerate = true
-			} else if accelX*c.velocityX > 0 {
-				shouldAccelerate = true
-			} else if math.Abs(c.velocityX) < highVelocityThreshold {
-				shouldAccelerate = true
-			}
-			if shouldAccelerate {
-				c.velocityX += -accelX * c.sensitivity * dt * 50
-			}
-		}
-
-		if math.Abs(accelY) > c.accelDeadzone {
-			shouldAccelerate := false
-
-			if math.Abs(c.velocityY) < lowVelocityThreshold {
-				shouldAccelerate = true
-			} else if accelY*c.velocityY > 0 {
-				shouldAccelerate = true
-			} else if math.Abs(c.velocityY) < highVelocityThreshold {
-				shouldAccelerate = true
-			}
-
-			if shouldAccelerate {
-				c.velocityY += accelY * c.sensitivity * dt * 50
-			}
-		}
-
-		log.Printf("Table mode motion: accel=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, accelZ, c.velocityX, c.velocityY)
-	} else { // Remote
-		// Remote mode: use rotation for velocity, with deadzone
-		// Use rotAlpha (yaw) for X movement, rotBeta (pitch) for Y movement
-		if math.Abs(rotAlpha) > c.rotDeadzone {
-			c.velocityY -= rotAlpha * 0.05
-		}
-		if math.Abs(rotGamma) > c.rotDeadzone {
-			c.velocityX -= rotGamma * 0.05
-		}
-		log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
+	// Use rotAlpha (yaw) for Y movement, rotGamma for X movement
+	if math.Abs(rotAlpha) > c.rotDeadzone {
+		c.velocityY -= rotAlpha * 0.05
 	}
-}
-
-func (c *PacketController) SetControlType(ct ControlType) {
-	c.controlType = ct
-	c.physicsMu.Lock()
-	c.velocityX = 0
-	c.velocityY = 0
-	c.physicsMu.Unlock()
+	if math.Abs(rotGamma) > c.rotDeadzone {
+		c.velocityX -= rotGamma * 0.05
+	}
+	log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
 }
 
 // takes a deserialized packet and executes the corresponding mouse action
@@ -251,42 +168,19 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	switch packet.Type() {
 	case MouseMove:
 		p := packet.(*MouseMovePacket)
-		controlType := c.controlType
-
-		// TODO: test both modes to ensure correct mouse movement behavior
-		//		 leaving for now so that both will function the same
-		switch controlType {
-		case Flat:
-			log.Printf("Moving mouse (flat): dx=%d, dy=%d", p.DeltaX, p.DeltaY)
-			return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
-		case Remote:
-			log.Printf("Moving mouse (remote): dx=%d, dy=%d", p.DeltaX, p.DeltaY)
-			return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
-		default:
-			return fmt.Errorf("unknown control type: %d", controlType)
-		}
+		log.Printf("Moving mouse: dx=%d, dy=%d", p.DeltaX, p.DeltaY)
+		return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, accel_z=%.2f, rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
-		c.updateMotion(p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
+		log.Printf("Device motion: rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
+		c.updateMotion(p.RotAlpha, p.RotBeta, p.RotGamma)
 		return nil
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
 		log.Printf("Scrolling: delta_x=%d, delta_y=%d", p.DeltaX, p.DeltaY)
 		return c.mouse.Scroll(p.DeltaX, p.DeltaY)
-
-	case SwitchMode:
-		// toggle between flat and remote control modes
-		if c.controlType == Flat {
-			c.SetControlType(Remote)
-			log.Println("Switched to Remote mode")
-		} else {
-			c.SetControlType(Flat)
-			log.Println("Switched to Flat mode")
-		}
-		return nil
 
 	case LeftClickUp:
 		log.Println("Left click up")
@@ -306,21 +200,15 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case Calibration:
 		p := packet.(*CalibrationPacket)
-		c.sumAccelX += p.AccelX
-		c.sumAccelY += p.AccelY
-		c.sumAccelZ += p.AccelZ
 		c.sumRotAlpha += p.RotAlpha
 		c.sumRotBeta += p.RotBeta
 		c.sumRotGamma += p.RotGamma
 		c.calibrationCount++
-		log.Printf("Calibration sample: count=%d, accel=(%.2f, %.2f, %.2f), rot=(%.2f, %.2f, %.2f)", c.calibrationCount, p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
+		log.Printf("Calibration sample: count=%d, rot=(%.2f, %.2f, %.2f)", c.calibrationCount, p.RotAlpha, p.RotBeta, p.RotGamma)
 		return nil
 
 	case CalibrationDone:
 		if c.calibrationCount > 0 {
-			c.baselineAccelX = c.sumAccelX / float64(c.calibrationCount)
-			c.baselineAccelY = c.sumAccelY / float64(c.calibrationCount)
-			c.baselineAccelZ = c.sumAccelZ / float64(c.calibrationCount)
 			c.baselineRotAlpha = c.sumRotAlpha / float64(c.calibrationCount)
 			c.baselineRotBeta = c.sumRotBeta / float64(c.calibrationCount)
 			c.baselineRotGamma = c.sumRotGamma / float64(c.calibrationCount)
@@ -328,9 +216,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		} else {
 			log.Println("Calibration done: no samples collected, baselines remain 0")
 		}
-		c.sumAccelX = 0.0
-		c.sumAccelY = 0.0
-		c.sumAccelZ = 0.0
 		c.sumRotAlpha = 0.0
 		c.sumRotBeta = 0.0
 		c.sumRotGamma = 0.0

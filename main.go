@@ -433,7 +433,7 @@ func main() {
 
 	authKey = generateAuthKey()
 	var err error
-	controller, err = server.NewPacketController(server.Flat)
+	controller, err = server.NewPacketController()
 	if err != nil {
 		log.Fatal("Failed to initialize packet controller:", err)
 	}
