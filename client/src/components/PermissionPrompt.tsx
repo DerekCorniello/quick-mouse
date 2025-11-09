@@ -72,13 +72,16 @@ export function PermissionPrompt({
       >
         No personal data is collected - sensor data stays on your device.
       </Typography>
+      <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
+        Permissions are requested automatically. If needed, click below.
+      </Typography>
       <Button
-        variant="contained"
+        variant="outlined"
         size="large"
         onClick={onRequestPermissions}
         sx={{ px: 4, py: 1.5 }}
       >
-        Enable Motion Control
+        Request Permissions
       </Button>
     </Box>
   );

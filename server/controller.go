@@ -26,6 +26,23 @@ type PacketController struct {
 	rotDeadzone   float64
 	isRunning     bool
 	stopPhysics   chan struct{}
+
+	// Calibration baselines
+	baselineAccelX   float64
+	baselineAccelY   float64
+	baselineAccelZ   float64
+	baselineRotAlpha float64
+	baselineRotBeta  float64
+	baselineRotGamma float64
+
+	// Calibration accumulators
+	sumAccelX        float64
+	sumAccelY        float64
+	sumAccelZ        float64
+	sumRotAlpha      float64
+	sumRotBeta       float64
+	sumRotGamma      float64
+	calibrationCount int
 }
 
 // initializes the packet controller with a mouse backend
@@ -37,15 +54,28 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 	}
 
 	controller := &PacketController{
-		mouse:         mouse,
-		controlType:   Flat,  // Start in Flat mode to match client default
-		sensitivity:   3.0,   // Much higher sensitivity for motion control
-		friction:      0.98,  // Minimal friction for motion momentum (2% loss)
-		maxVelocity:   150.0, // Higher velocity cap for more speed
-		accelDeadzone: 0.3,   // Higher deadzone for motion control noise
-		rotDeadzone:   0.1,   // Minimum rotation rate to process
-		stopPhysics:   make(chan struct{}),
-		lastUpdate:    time.Now(),
+		mouse:            mouse,
+		controlType:      Flat,  // Start in Flat mode to match client default
+		sensitivity:      3.0,   // Much higher sensitivity for motion control
+		friction:         0.98,  // Minimal friction for motion momentum (2% loss)
+		maxVelocity:      150.0, // Higher velocity cap for more speed
+		accelDeadzone:    0.3,   // Higher deadzone for motion control noise
+		rotDeadzone:      0.1,   // Minimum rotation rate to process
+		stopPhysics:      make(chan struct{}),
+		lastUpdate:       time.Now(),
+		baselineAccelX:   0.0,
+		baselineAccelY:   0.0,
+		baselineAccelZ:   0.0,
+		baselineRotAlpha: 0.0,
+		baselineRotBeta:  0.0,
+		baselineRotGamma: 0.0,
+		sumAccelX:        0.0,
+		sumAccelY:        0.0,
+		sumAccelZ:        0.0,
+		sumRotAlpha:      0.0,
+		sumRotBeta:       0.0,
+		sumRotGamma:      0.0,
+		calibrationCount: 0,
 	}
 
 	// Start physics update loop
@@ -133,6 +163,14 @@ func (c *PacketController) updatePhysics() {
 func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma float64) {
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
+
+	// Subtract calibration baselines
+	accelX -= c.baselineAccelX
+	accelY -= c.baselineAccelY
+	accelZ -= c.baselineAccelZ
+	rotAlpha -= c.baselineRotAlpha
+	rotBeta -= c.baselineRotBeta
+	rotGamma -= c.baselineRotGamma
 
 	if c.controlType == Flat {
 		// Only apply acceleration if:
@@ -272,6 +310,40 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	case RightClickDown:
 		log.Println("Right click down")
 		return c.mouse.Press("right")
+
+	case Calibration:
+		p := packet.(*CalibrationPacket)
+		c.sumAccelX += p.AccelX
+		c.sumAccelY += p.AccelY
+		c.sumAccelZ += p.AccelZ
+		c.sumRotAlpha += p.RotAlpha
+		c.sumRotBeta += p.RotBeta
+		c.sumRotGamma += p.RotGamma
+		c.calibrationCount++
+		log.Printf("Calibration sample: count=%d, accel=(%.2f, %.2f, %.2f), rot=(%.2f, %.2f, %.2f)", c.calibrationCount, p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
+		return nil
+
+	case CalibrationDone:
+		if c.calibrationCount > 0 {
+			c.baselineAccelX = c.sumAccelX / float64(c.calibrationCount)
+			c.baselineAccelY = c.sumAccelY / float64(c.calibrationCount)
+			c.baselineAccelZ = c.sumAccelZ / float64(c.calibrationCount)
+			c.baselineRotAlpha = c.sumRotAlpha / float64(c.calibrationCount)
+			c.baselineRotBeta = c.sumRotBeta / float64(c.calibrationCount)
+			c.baselineRotGamma = c.sumRotGamma / float64(c.calibrationCount)
+			log.Printf("Calibration done: baselines set from %d samples", c.calibrationCount)
+		} else {
+			log.Println("Calibration done: no samples collected, baselines remain 0")
+		}
+		// Reset accumulators
+		c.sumAccelX = 0.0
+		c.sumAccelY = 0.0
+		c.sumAccelZ = 0.0
+		c.sumRotAlpha = 0.0
+		c.sumRotBeta = 0.0
+		c.sumRotGamma = 0.0
+		c.calibrationCount = 0
+		return nil
 
 	default:
 		return fmt.Errorf("unknown packet type: %s", packet.Type())
