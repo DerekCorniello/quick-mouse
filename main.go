@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -235,6 +236,10 @@ var upgrader = websocket.Upgrader{
 var serializer server.Serializer = server.JSONSerializer{}
 var controller *server.PacketController
 var connectedClients int
+var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
+var lastLog string
+var lastAction string
+var physicsRunning bool
 
 func enterAlternateScreen() {
 	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
@@ -250,6 +255,14 @@ func updateDisplay() {
 
 	if connectedClients > 0 {
 		fmt.Println("Status: Device connected")
+		if *logFlag {
+			fmt.Printf("Connected clients: %d\n", connectedClients)
+			fmt.Printf("Physics running: %t\n", physicsRunning)
+			fmt.Printf("Last action: %s\n", lastAction)
+			if lastLog != "" {
+				fmt.Printf("Last log: %s\n", lastLog)
+			}
+		}
 	} else {
 		localIP := getLocalIP()
 		httpURL := fmt.Sprintf("https://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
@@ -263,15 +276,30 @@ func updateDisplay() {
 			QuietZone: 0,
 		})
 		fmt.Println("\nPress Ctrl+C to exit")
+		if *logFlag {
+			fmt.Printf("Physics running: %t\n", physicsRunning)
+			if lastLog != "" {
+				fmt.Printf("Last log: %s\n", lastLog)
+			}
+		}
 	}
 }
 
 var authKey string
 
+func logIfEnabled(format string, args ...any) {
+	if *logFlag {
+		msg := fmt.Sprintf(format, args...)
+		lastLog = msg
+		log.Print(msg)
+	}
+	updateDisplay()
+}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("Error upgrading connection:", err)
+		logIfEnabled("Error upgrading connection: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -286,22 +314,22 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	// require authentication first
 	_, message, err := conn.ReadMessage()
 	if err != nil {
-		log.Println("Error reading first message:", err)
+		logIfEnabled("Error reading first message: %v", err)
 		return
 	}
-	fmt.Printf("Received first message: %s\n", message)
+	logIfEnabled("Received first message: %s", message)
 
 	// always parse as auth packet
 	var envelope struct {
 		Type server.PacketType `json:"type"`
 	}
 	if err := json.Unmarshal(message, &envelope); err != nil {
-		log.Println("Error parsing first JSON:", err)
+		logIfEnabled("Error parsing first JSON: %v", err)
 		conn.Close()
 		return
 	}
 	if envelope.Type != server.Auth {
-		log.Println("First message is not auth")
+		logIfEnabled("First message is not auth")
 		conn.Close()
 		return
 	}
@@ -309,23 +337,24 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	// unmarshal auth packet
 	packet, err := serializer.Unmarshal(message, server.Auth)
 	if err != nil {
-		log.Println("Error unmarshaling auth packet:", err)
+		logIfEnabled("Error unmarshaling auth packet: %v", err)
 		conn.Close()
 		return
 	}
 	authPacket, ok := packet.(*server.AuthPacket)
 	if !ok {
-		log.Println("Invalid auth packet")
+		logIfEnabled("Invalid auth packet")
 		conn.Close()
 		return
 	}
 	if authPacket.Key != authKey {
-		log.Println("Invalid auth key")
+		logIfEnabled("Invalid auth key")
 		conn.Close()
 		return
 	}
 
-	log.Println("Client authenticated successfully")
+	logIfEnabled("Client authenticated successfully")
+	lastAction = "auth"
 
 	// start keep-alive mechanism
 	// ws connections typically timeout after 30-120 seconds of inactivity
@@ -343,15 +372,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				keepAlive := map[string]string{"type": "keep_alive"}
 				response, err := json.Marshal(keepAlive)
 				if err != nil {
-					log.Println("Error marshaling keep-alive:", err)
+					logIfEnabled("Error marshaling keep-alive: %v", err)
 					return
 				}
 				err = conn.WriteMessage(websocket.TextMessage, response)
 				if err != nil {
-					log.Println("Error sending keep-alive:", err)
+					logIfEnabled("Error sending keep-alive: %v", err)
 					return
 				}
-				log.Println("Sent keep-alive packet")
+				logIfEnabled("Sent keep-alive packet")
 				keepAliveTimer.Reset(25 * time.Second)
 			case <-activityChan:
 				if !keepAliveTimer.Stop() {
@@ -369,7 +398,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("Error reading message:", err)
+			logIfEnabled("Error reading message: %v", err)
 			break
 		}
 		// signal activity to reset keep-alive timer
@@ -377,15 +406,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		case activityChan <- struct{}{}:
 		default:
 		}
-		fmt.Printf("Received: %s\n", message)
+		logIfEnabled("Received: %s", message)
 
 		// parse packet type from JSON
 		if err := json.Unmarshal(message, &envelope); err != nil {
-			log.Println("Error parsing JSON:", err)
+			logIfEnabled("Error parsing JSON: %v", err)
 			continue
 		}
 		if envelope.Type == "" {
-			log.Println("Missing or invalid type field")
+			logIfEnabled("Missing or invalid type field")
 			continue
 		}
 		packetType := envelope.Type
@@ -398,12 +427,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		// unmarshal the packet
 		packet, err := serializer.Unmarshal(message, packetType)
 		if err != nil {
-			log.Println("Error unmarshaling packet:", err)
+			logIfEnabled("Error unmarshaling packet: %v", err)
 			continue
 		}
 
+		lastAction = string(packetType)
 		if err := controller.ProcessPacket(packet); err != nil {
-			log.Println("Error processing packet:", err)
+			logIfEnabled("Error processing packet: %v", err)
 			continue
 		}
 	}
@@ -418,6 +448,8 @@ func generateAuthKey() string {
 }
 
 func main() {
+	flag.Parse()
+
 	// lets not overflow the tui
 	enterAlternateScreen()
 	defer exitAlternateScreen()
@@ -433,11 +465,12 @@ func main() {
 
 	authKey = generateAuthKey()
 	var err error
-	controller, err = server.NewPacketController()
+	controller, err = server.NewPacketController(*logFlag)
 	if err != nil {
 		log.Fatal("Failed to initialize packet controller:", err)
 	}
 	defer controller.Close()
+	physicsRunning = true
 
 	// serve static files from the React build directory
 	fs := http.FileServer(http.Dir("./client/build"))

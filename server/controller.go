@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+func (c *PacketController) logIfEnabled(format string, args ...interface{}) {
+	if c.verbose {
+		log.Printf(format, args...)
+	}
+}
+
 // takes incoming packets from the websocket and translates them
 // into actual mouse stuff it acts as the bridge between network messages and system input.
 type PacketController struct {
@@ -35,11 +41,13 @@ type PacketController struct {
 	sumRotBeta       float64
 	sumRotGamma      float64
 	calibrationCount int
+
+	verbose bool
 }
 
 // initializes the packet controller with a mouse backend
 // detects the display server and sets up the appropriate mouse control system automatically.
-func NewPacketController() (*PacketController, error) {
+func NewPacketController(verbose bool) (*PacketController, error) {
 	mouse, err := NewUniversalMouse()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize mouse: %v", err)
@@ -60,6 +68,7 @@ func NewPacketController() (*PacketController, error) {
 		sumRotBeta:       0.0,
 		sumRotGamma:      0.0,
 		calibrationCount: 0,
+		verbose:          verbose,
 	}
 
 	controller.startPhysicsLoop()
@@ -71,7 +80,7 @@ func NewPacketController() (*PacketController, error) {
 // NOTE: we may wanna test this more later to see how far we can stretch it :)
 func (c *PacketController) startPhysicsLoop() {
 	c.isRunning = true
-	log.Println("Starting physics loop")
+	c.logIfEnabled("Starting physics loop")
 	go func() {
 		ticker := time.NewTicker(16 * time.Millisecond) // ~60fps
 		defer ticker.Stop()
@@ -81,7 +90,7 @@ func (c *PacketController) startPhysicsLoop() {
 			case <-ticker.C:
 				c.updatePhysics()
 			case <-c.stopPhysics:
-				log.Println("Stopping physics loop")
+				c.logIfEnabled("Stopping physics loop")
 				return
 			}
 		}
@@ -134,10 +143,9 @@ func (c *PacketController) updatePhysics() {
 
 	// only move if there's meaningful velocity
 	if deltaX != 0 || deltaY != 0 {
-		log.Printf("Physics mouse move: vx=%.2f, vy=%.2f, dx=%d, dy=%d", c.velocityX, c.velocityY, deltaX, deltaY)
 		err := c.mouse.MoveRelative(deltaX, deltaY)
 		if err != nil {
-			log.Printf("Physics mouse move error: %v", err)
+			c.logIfEnabled("Physics mouse move error: %v", err)
 		}
 	}
 }
@@ -159,7 +167,6 @@ func (c *PacketController) updateMotion(rotAlpha, rotBeta, rotGamma float64) {
 	if math.Abs(rotGamma) > c.rotDeadzone {
 		c.velocityX -= rotGamma * 0.05
 	}
-	log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
 }
 
 // takes a deserialized packet and executes the corresponding mouse action
@@ -171,7 +178,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		sensitivity := p.PointerSensitivity / 10.0
 		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
 		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
-		log.Printf("Moving mouse: dx=%d, dy=%d, sensitivity=%.2f, scaled_dx=%d, scaled_dy=%d", p.DeltaX, p.DeltaY, sensitivity, scaledDeltaX, scaledDeltaY)
 		return c.mouse.MoveRelative(scaledDeltaX, scaledDeltaY)
 
 	case DeviceMotion:
@@ -180,7 +186,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		scaledRotAlpha := p.RotAlpha * sensitivity
 		scaledRotBeta := p.RotBeta * sensitivity
 		scaledRotGamma := p.RotGamma * sensitivity
-		log.Printf("Device motion: rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, sensitivity=%.2f, scaled_rot=(%.2f, %.2f, %.2f), timestamp=%d", p.RotAlpha, p.RotBeta, p.RotGamma, sensitivity, scaledRotAlpha, scaledRotBeta, scaledRotGamma, p.Timestamp)
 		c.updateMotion(scaledRotAlpha, scaledRotBeta, scaledRotGamma)
 		return nil
 
@@ -189,23 +194,22 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		sensitivity := p.ScrollSensitivity / 10.0
 		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
 		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
-		log.Printf("Scrolling: delta_x=%d, delta_y=%d, sensitivity=%.2f, scaled_dx=%d, scaled_dy=%d", p.DeltaX, p.DeltaY, sensitivity, scaledDeltaX, scaledDeltaY)
 		return c.mouse.Scroll(scaledDeltaX, scaledDeltaY)
 
 	case LeftClickUp:
-		log.Println("Left click up")
+		c.logIfEnabled("Left click up")
 		return c.mouse.Release("left")
 
 	case LeftClickDown:
-		log.Println("Left click down")
+		c.logIfEnabled("Left click down")
 		return c.mouse.Press("left")
 
 	case RightClickUp:
-		log.Println("Right click up")
+		c.logIfEnabled("Right click up")
 		return c.mouse.Release("right")
 
 	case RightClickDown:
-		log.Println("Right click down")
+		c.logIfEnabled("Right click down")
 		return c.mouse.Press("right")
 
 	case Calibration:
@@ -214,7 +218,7 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		c.sumRotBeta += p.RotBeta
 		c.sumRotGamma += p.RotGamma
 		c.calibrationCount++
-		log.Printf("Calibration sample: count=%d, rot=(%.2f, %.2f, %.2f)", c.calibrationCount, p.RotAlpha, p.RotBeta, p.RotGamma)
+		c.logIfEnabled("Calibration sample: count=%d, rot=(%.5f, %.5f, %.5f)", c.calibrationCount, p.RotAlpha, p.RotBeta, p.RotGamma)
 		return nil
 
 	case CalibrationDone:
@@ -222,9 +226,9 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 			c.baselineRotAlpha = c.sumRotAlpha / float64(c.calibrationCount)
 			c.baselineRotBeta = c.sumRotBeta / float64(c.calibrationCount)
 			c.baselineRotGamma = c.sumRotGamma / float64(c.calibrationCount)
-			log.Printf("Calibration done: baselines set from %d samples", c.calibrationCount)
+			c.logIfEnabled("Calibration done: baselines set from %d samples", c.calibrationCount)
 		} else {
-			log.Println("Calibration done: no samples collected, baselines remain 0")
+			c.logIfEnabled("Calibration done: no samples collected, baselines remain 0")
 		}
 		c.sumRotAlpha = 0.0
 		c.sumRotBeta = 0.0

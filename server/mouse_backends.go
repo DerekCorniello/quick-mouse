@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"time"
@@ -70,14 +71,14 @@ type MouseController interface {
 // creates a mouse controller for the detected platform
 func NewMouseController() (MouseController, error) {
 	displayType := DetectDisplayServer()
-	fmt.Printf("Detected display server: %s\n", displayType)
+	log.Printf("Detected display server: %s", displayType)
 
 	switch displayType {
 	case Wayland:
-		fmt.Println("Using uinput backend")
+		log.Printf("Using uinput backend")
 		return NewWaylandMouse()
 	case X11, Windows, MacOS:
-		fmt.Println("Using robotgo backend")
+		log.Printf("Using robotgo backend")
 		return NewRobotgoMouse()
 	default:
 		return nil, fmt.Errorf("unsupported display server: %s", displayType)
