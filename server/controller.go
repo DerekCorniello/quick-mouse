@@ -39,9 +39,9 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 	controller := &PacketController{
 		mouse:         mouse,
 		controlType:   Flat,  // Start in Flat mode to match client default
-		sensitivity:   0.3,   // Reduced sensitivity for smoother control
-		friction:      0.92,  // Velocity decay per frame (8% loss)
-		maxVelocity:   100.0, // Maximum velocity cap
+		sensitivity:   1.2,   // Higher sensitivity for adaptive control
+		friction:      0.95,  // Reduced friction for better momentum (5% loss)
+		maxVelocity:   150.0, // Higher velocity cap for more speed
 		accelDeadzone: 0.05,  // Minimum acceleration to process
 		rotDeadzone:   0.1,   // Minimum rotation rate to process
 		stopPhysics:   make(chan struct{}),
@@ -92,9 +92,12 @@ func (c *PacketController) updatePhysics() {
 	c.velocityY *= c.friction
 
 	// Snap to zero when velocity is very small (prevents oscillation)
-	velocityThreshold := 0.5
+	velocityThreshold := 0.2 // Match low velocity threshold for consistency
 	if math.Abs(c.velocityX) < velocityThreshold {
 		c.velocityX = 0
+	}
+	if math.Abs(c.velocityY) < velocityThreshold {
+		c.velocityY = 0
 	}
 	if math.Abs(c.velocityY) < velocityThreshold {
 		c.velocityY = 0
@@ -113,8 +116,8 @@ func (c *PacketController) updatePhysics() {
 	}
 
 	// Convert velocity to mouse movement
-	deltaX := int32(c.velocityX * 2.5) // Scale factor for mouse sensitivity
-	deltaY := int32(c.velocityY * 2.5)
+	deltaX := int32(c.velocityX * 6.0) // Further increased for adaptive control
+	deltaY := int32(c.velocityY * 6.0)
 
 	// Only move if there's meaningful velocity
 	if deltaX != 0 || deltaY != 0 {
@@ -136,25 +139,56 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 		// 1. Velocity is near zero (starting from rest), OR
 		// 2. Acceleration is in the same direction as current velocity
 		// This prevents deceleration from reversing direction
-		
-		// Handle X axis (accelY controls X movement)
-		if math.Abs(accelY) > c.accelDeadzone {
-			if math.Abs(c.velocityX) < 1.0 || (accelY*c.velocityX > 0) {
-				// Either starting from rest or accelerating in same direction
-				c.velocityX += accelY * c.sensitivity
-			}
-			// Otherwise: ignore this acceleration (it's deceleration opposing our motion)
+
+		// Calculate dt for proper time integration
+		dt := time.Since(c.lastUpdate).Seconds()
+		c.lastUpdate = time.Now()
+		if dt > 0.1 { // Cap dt to prevent large jumps
+			dt = 0.016
 		}
-		
-		// Handle Y axis (accelX controls Y movement)
+
+		// Adaptive commitment thresholds for better reactivity
+		const lowVelocityThreshold = 0.2  // Allow reversals when slow
+		const highVelocityThreshold = 2.0 // Strong commitment when fast
+
+		// Handle X axis (accelX controls X movement - horizontal mouse)
 		if math.Abs(accelX) > c.accelDeadzone {
-			if math.Abs(c.velocityY) < 1.0 || (accelX*c.velocityY > 0) {
-				// Either starting from rest or accelerating in same direction
-				c.velocityY += accelX * c.sensitivity
+			shouldAccelerate := false
+
+			if math.Abs(c.velocityX) < lowVelocityThreshold {
+				// Low velocity: allow any direction change (fully reactive)
+				shouldAccelerate = true
+			} else if accelX*c.velocityX > 0 {
+				// Same direction: always accelerate
+				shouldAccelerate = true
+			} else if math.Abs(c.velocityX) < highVelocityThreshold {
+				// Medium velocity, opposite direction: allow reversal
+				shouldAccelerate = true
 			}
-			// Otherwise: ignore this acceleration (it's deceleration opposing our motion)
+			// High velocity + opposite direction: maintain commitment (no acceleration)
+
+			if shouldAccelerate {
+				c.velocityX += -accelX * c.sensitivity * dt * 180 // Negate for correct left/right direction
+			}
 		}
-		
+
+		// Handle Y axis (accelY controls Y movement - vertical mouse)
+		if math.Abs(accelY) > c.accelDeadzone {
+			shouldAccelerate := false
+
+			if math.Abs(c.velocityY) < lowVelocityThreshold {
+				shouldAccelerate = true
+			} else if accelY*c.velocityY > 0 {
+				shouldAccelerate = true
+			} else if math.Abs(c.velocityY) < highVelocityThreshold {
+				shouldAccelerate = true
+			}
+
+			if shouldAccelerate {
+				c.velocityY += accelY * c.sensitivity * dt * 180 // Higher scaling for reactivity
+			}
+		}
+
 		log.Printf("Table mode motion: accel=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, accelZ, c.velocityX, c.velocityY)
 	} else { // Remote
 		// Remote mode: use rotation for velocity, with deadzone
@@ -171,7 +205,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 
 func (c *PacketController) SetControlType(ct ControlType) {
 	c.controlType = ct
-	
+
 	// Reset velocity when switching modes
 	c.physicsMu.Lock()
 	c.velocityX = 0
