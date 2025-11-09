@@ -5,6 +5,7 @@ import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import PauseIcon from "@mui/icons-material/Pause";
+import { useTheme } from "@mui/material/styles";
 
 interface PauseModalProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface PauseModalProps {
 }
 
 export default function PauseModal({ open, onClose }: PauseModalProps) {
+  const theme = useTheme();
   return (
     <Dialog
       open={open}
@@ -21,7 +23,7 @@ export default function PauseModal({ open, onClose }: PauseModalProps) {
       BackdropProps={{ style: { pointerEvents: "none" } }}
       sx={{
         "& .MuiDialog-paper": {
-          background: "linear-gradient(180deg, #0f1720 0%, #111827 100%)",
+          background: theme.app.background.gradient,
           border: 1,
           borderColor: "divider",
           borderRadius: 3,
@@ -46,15 +48,14 @@ export default function PauseModal({ open, onClose }: PauseModalProps) {
       <DialogContent sx={{ p: 3 }}>
         <Typography sx={{ color: "text.secondary" }}>
           Mouse control data is currently paused. The connection remains active.
-          Click &ldquo;Resume&rdquo; to continue sending data.
+          Click Resume to continue sending data.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ p: 3, pt: 0 }}>
         <Button onClick={onClose} variant="contained" color="primary" fullWidth>
-          Resume Data Transmission
+          Resume
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-

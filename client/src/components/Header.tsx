@@ -23,8 +23,6 @@ interface HeaderProps {
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
-  isTable: boolean;
-  onToggleIsTable: () => void;
   naturalScroll: boolean;
   onToggleNaturalScroll: () => void;
   onToggleSwapLeftRightClick: () => void;
@@ -43,8 +41,6 @@ export function Header({
   onToggleSensorLog,
   buttonsAboveTouchpad,
   onToggleButtonPosition,
-  isTable,
-  onToggleIsTable,
   naturalScroll,
   onToggleNaturalScroll,
   onToggleSwapLeftRightClick,
@@ -117,24 +113,22 @@ export function Header({
         >
           <SettingsIcon />
         </IconButton>
-         <SettingsModal
-           open={settingsOpen}
-           onClose={handleSettingsClose}
-           pointerSensitivity={pointerSensitivity}
-           scrollSensitivity={scrollSensitivity}
-           onPointerSensitivityChange={onPointerSensitivityChange}
-           onScrollSensitivityChange={onScrollSensitivityChange}
-           showSensorLog={showSensorLog}
-           onToggleSensorLog={onToggleSensorLog}
-           buttonsAboveTouchpad={buttonsAboveTouchpad}
-           onToggleButtonPosition={onToggleButtonPosition}
-           isTable={isTable}
-           onToggleIsTable={onToggleIsTable}
-           naturalScroll={naturalScroll}
-           onToggleNaturalScroll={onToggleNaturalScroll}
-           onToggleSwapLeftRightClick={onToggleSwapLeftRightClick}
-           onRecalibrate={onRecalibrate}
-         />
+        <SettingsModal
+          open={settingsOpen}
+          onClose={handleSettingsClose}
+          pointerSensitivity={pointerSensitivity}
+          scrollSensitivity={scrollSensitivity}
+          onPointerSensitivityChange={onPointerSensitivityChange}
+          onScrollSensitivityChange={onScrollSensitivityChange}
+          showSensorLog={showSensorLog}
+          onToggleSensorLog={onToggleSensorLog}
+          buttonsAboveTouchpad={buttonsAboveTouchpad}
+          onToggleButtonPosition={onToggleButtonPosition}
+          naturalScroll={naturalScroll}
+          onToggleNaturalScroll={onToggleNaturalScroll}
+          onToggleSwapLeftRightClick={onToggleSwapLeftRightClick}
+          onRecalibrate={onRecalibrate}
+        />
         <PauseModal open={pauseOpen} onClose={handlePauseClose} />
       </Toolbar>
     </AppBar>

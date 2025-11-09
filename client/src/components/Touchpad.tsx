@@ -6,7 +6,6 @@ import { RefObject } from "react";
 interface TouchpadProps {
   touchpadRef: RefObject<HTMLDivElement>;
   touchActive: boolean;
-  cursorPosition: { x: number; y: number };
   isLeftPressed: boolean;
   isRightPressed: boolean;
   onTouchStart: (e: React.TouchEvent) => void;
@@ -38,7 +37,7 @@ export function Touchpad({
         minHeight: 200,
         maxHeight: "calc(100vh - 350px)",
         borderRadius: 3,
-        border: 2,
+        border: 1,
         borderColor: theme.palette.primary.main,
         overflow: "hidden",
         bgcolor: "transparent",

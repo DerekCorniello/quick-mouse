@@ -16,7 +16,9 @@ export function PermissionPrompt({
   if (isRequesting) {
     return (
       <Box
-        sx={{
+        sx={(theme) => ({
+          border: 1,
+          borderColor: theme.palette.primary.main,
           position: "fixed",
           top: "50%",
           left: "50%",
@@ -28,14 +30,15 @@ export function PermissionPrompt({
           boxShadow: 3,
           zIndex: 1000,
           minWidth: 300,
-        }}
+        })}
       >
         <CircularProgress size={48} sx={{ mb: 2 }} />
         <Typography variant="h6" sx={{ mb: 1 }}>
           Requesting Permissions
         </Typography>
         <Typography color="text.secondary">
-          Please grant device motion access when prompted by your browser.
+          Please grant device motion access for mouse control when prompted by
+          your browser.
         </Typography>
       </Box>
     );
@@ -43,7 +46,9 @@ export function PermissionPrompt({
 
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
+        border: 1,
+        borderColor: theme.palette.primary.main,
         position: "fixed",
         top: "50%",
         left: "50%",
@@ -54,26 +59,26 @@ export function PermissionPrompt({
         borderRadius: 3,
         boxShadow: 3,
         zIndex: 1000,
-        minWidth: 350,
-      }}
+        minWidth: 300,
+      })}
     >
       <SensorsIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
       <Typography variant="h5" sx={{ mb: 2 }}>
         Device Motion Control
       </Typography>
       <Typography sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}>
-        This app uses your device&apos;s motion sensors to control the mouse
-        cursor. Your device movements will move the cursor, and touch gestures
-        will scroll content.
+        This app uses your device motion sensors to control the mouse cursor.
+        Your device movements will move the cursor, and touch gestures will
+        scroll content.
       </Typography>
       <Typography
         variant="body2"
         sx={{ mb: 3, color: "text.secondary", fontStyle: "italic" }}
       >
-        No personal data is collected - sensor data stays on your device.
+        No personal data is collected - everything is running locally.
       </Typography>
       <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-        Permissions are requested automatically. If needed, click below.
+        Permissions are requested automatically. Retry below if not promped.
       </Typography>
       <Button
         variant="outlined"
@@ -86,4 +91,3 @@ export function PermissionPrompt({
     </Box>
   );
 }
-

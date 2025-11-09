@@ -10,7 +10,11 @@ interface SensorLogProps {
   onPermissionsGranted?: () => void;
 }
 
-export function SensorLog({ swipeDirection, swipeMagnitude, onPermissionsGranted }: SensorLogProps) {
+export function SensorLog({
+  swipeDirection,
+  swipeMagnitude,
+  onPermissionsGranted,
+}: SensorLogProps) {
   const [eventCount, setEventCount] = useState(0);
   const [orientation, setOrientation] = useState({
     alpha: 0,

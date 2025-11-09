@@ -27,8 +27,10 @@ export function CalibrationDialog({
   if (step === "confirm") {
     return (
       <Box
-        sx={{
+        sx={(theme) => ({
           position: "fixed",
+          border: 1,
+          borderColor: theme.palette.primary.main,
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
@@ -39,14 +41,14 @@ export function CalibrationDialog({
           boxShadow: 3,
           zIndex: 1000,
           minWidth: 350,
-        }}
+        })}
       >
         <SensorsIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
         <Typography variant="h5" sx={{ mb: 2 }}>
           Calibrate Motion Sensors
         </Typography>
         <Typography sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}>
-          Calibration will zero your device&apos;s motion sensors for accurate control.
+          Calibration will zero your device motion sensors for accurate control.
           Hold your device steady and avoid movement during calibration.
         </Typography>
         <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
@@ -73,7 +75,9 @@ export function CalibrationDialog({
 
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
+        border: 1,
+        borderColor: theme.palette.primary.main,
         position: "fixed",
         top: "50%",
         left: "50%",
@@ -85,15 +89,15 @@ export function CalibrationDialog({
         boxShadow: 3,
         zIndex: 1000,
         minWidth: 350,
-      }}
+      })}
     >
       <SensorsIcon sx={{ fontSize: 64, color: "primary.main", mb: 2 }} />
       <Typography variant="h5" sx={{ mb: 2 }}>
         Calibrating...
       </Typography>
-       <Typography sx={{ mb: 3, color: "text.secondary" }}>
-         Hold your device steady or move gently - collecting samples.
-       </Typography>
+      <Typography sx={{ mb: 3, color: "text.secondary" }}>
+        Hold your device steady - collecting samples.
+      </Typography>
     </Box>
   );
 }

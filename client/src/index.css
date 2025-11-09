@@ -1,5 +1,3 @@
-/* Minimal base CSS — MUI provides component styles and resets via CssBaseline */
-
 html {
   font-family:
     Inter,
@@ -15,7 +13,6 @@ body {
   margin: 0;
 }
 
-/* Keep some app CSS variables for compatibility */
 :root {
   --background: #0f1720;
   --foreground: #ffffff;
@@ -70,7 +67,6 @@ body {
   opacity: 0.1;
 }
 
-/* Keep only minimal legacy variables; primary theming lives in MUI theme */
 :root {
   --background: #0f1720;
   --foreground: #ffffff;

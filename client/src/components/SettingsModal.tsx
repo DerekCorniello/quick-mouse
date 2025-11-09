@@ -15,8 +15,6 @@ interface SettingsModalProps {
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
-  isTable: boolean;
-  onToggleIsTable: () => void;
   naturalScroll: boolean;
   onToggleNaturalScroll: () => void;
   onToggleSwapLeftRightClick: () => void;
@@ -34,8 +32,6 @@ export default function SettingsModal({
   onToggleSensorLog,
   buttonsAboveTouchpad,
   onToggleButtonPosition,
-  isTable,
-  onToggleIsTable,
   naturalScroll,
   onToggleNaturalScroll,
   onToggleSwapLeftRightClick,
@@ -50,7 +46,7 @@ export default function SettingsModal({
         fullWidth
         sx={{
           "& .MuiDialog-paper": {
-            background: "linear-gradient(180deg, #0f1720 0%, #111827 100%)",
+            bgcolor: "background.paper",
             border: 1,
             borderColor: "divider",
             borderRadius: 3,
@@ -79,11 +75,7 @@ export default function SettingsModal({
             sensitivity={scrollSensitivity}
             onSensitivityChange={onScrollSensitivityChange}
           />
-          <Button
-            variant="outlined"
-            onClick={onToggleSensorLog}
-            sx={{ mt: 2 }}
-          >
+          <Button variant="outlined" onClick={onToggleSensorLog} sx={{ mt: 2 }}>
             {showSensorLog ? "Hide Sensor Log" : "Show Sensor Log"}
           </Button>
           <Button
@@ -91,37 +83,37 @@ export default function SettingsModal({
             onClick={onToggleButtonPosition}
             sx={{ mt: 1 }}
           >
-            {buttonsAboveTouchpad ? "Move Buttons Below Touchpad" : "Move Buttons Above Touchpad"}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={onToggleIsTable}
-            sx={{ mt: 1 }}
-          >
-            {isTable ? "Switch to Handheld Mode" : "Switch to Table Mode"}
+            {buttonsAboveTouchpad
+              ? "Move Buttons Below Touchpad"
+              : "Move Buttons Above Touchpad"}
           </Button>
           <Button
             variant="outlined"
             onClick={onToggleNaturalScroll}
             sx={{ mt: 1 }}
           >
-            {naturalScroll ? "Switch to Reverse Scroll" : "Switch to Natural Scroll"}
+            {naturalScroll
+              ? "Switch to Reverse Scroll"
+              : "Switch to Natural Scroll"}
           </Button>
-           <Button
-             variant="outlined"
-             onClick={onToggleSwapLeftRightClick}
-             sx={{ mt: 1 }}
-           >
-             Swap Left/Right Click
-           </Button>
-           <Button
-             variant="outlined"
-             onClick={() => { onRecalibrate(); onClose(); }}
-             sx={{ mt: 1 }}
-           >
-             Recalibrate Motion Sensors
-           </Button>
-         </DialogContent>
+          <Button
+            variant="outlined"
+            onClick={onToggleSwapLeftRightClick}
+            sx={{ mt: 1 }}
+          >
+            Swap Left/Right Click
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              onRecalibrate();
+              onClose();
+            }}
+            sx={{ mt: 1 }}
+          >
+            Recalibrate Motion Sensors
+          </Button>
+        </DialogContent>
       </Dialog>
     </>
   );
