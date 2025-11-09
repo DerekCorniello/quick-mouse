@@ -447,7 +447,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler)
 	updateDisplay()
 
-	err = http.ListenAndServeTLS(":3000", "certs/server.pem", "certs/server-key.pem", nil)
+	err = http.ListenAndServeTLS(":3000", "certs/localhost.pem", "certs/localhost-key.pem", nil)
 	if err != nil {
 		log.Fatal("Error starting HTTPS server:", err)
 	}
