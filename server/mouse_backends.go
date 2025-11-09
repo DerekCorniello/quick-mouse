@@ -27,19 +27,19 @@ func DetectDisplayServer() DisplayType {
 
 	switch system {
 	case "linux":
-		// Check XDG_SESSION_TYPE environment variable
+		// check XDG_SESSION_TYPE environment variable
 		switch sessionType := os.Getenv("XDG_SESSION_TYPE"); sessionType {
 		case "wayland":
 			return Wayland
 		case "x11":
 			return X11
 		default:
-			// Fallback: check WAYLAND_DISPLAY
+			// fallback is to check WAYLAND_DISPLAY
 			if os.Getenv("WAYLAND_DISPLAY") != "" {
 				return Wayland
 			}
 
-			// Fallback: check DISPLAY (X11)
+			// fallback is to check DISPLAY (X11)
 			if os.Getenv("DISPLAY") != "" {
 				return X11
 			}
@@ -209,7 +209,6 @@ func (m *RobotgoMouse) Press(button string) error {
 	return nil
 }
 
-// Release releases a mouse button
 func (m *RobotgoMouse) Release(button string) error {
 	switch button {
 	case "left":

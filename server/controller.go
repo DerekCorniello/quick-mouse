@@ -14,7 +14,7 @@ type PacketController struct {
 	mouse       *UniversalMouse
 	controlType ControlType
 
-	// Physics state for device motion integration
+	// physics state for device motion integration
 	physicsMu     sync.RWMutex
 	velocityX     float64
 	velocityY     float64
@@ -27,7 +27,7 @@ type PacketController struct {
 	isRunning     bool
 	stopPhysics   chan struct{}
 
-	// Calibration baselines
+	// calibration baselines
 	baselineAccelX   float64
 	baselineAccelY   float64
 	baselineAccelZ   float64
@@ -35,7 +35,7 @@ type PacketController struct {
 	baselineRotBeta  float64
 	baselineRotGamma float64
 
-	// Calibration accumulators
+	// calibration accumulators
 	sumAccelX        float64
 	sumAccelY        float64
 	sumAccelZ        float64
@@ -55,12 +55,12 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 
 	controller := &PacketController{
 		mouse:            mouse,
-		controlType:      Flat,  // Start in Flat mode to match client default
-		sensitivity:      3.0,   // Much higher sensitivity for motion control
-		friction:         0.98,  // Minimal friction for motion momentum (2% loss)
-		maxVelocity:      150.0, // Higher velocity cap for more speed
-		accelDeadzone:    0.3,   // Higher deadzone for motion control noise
-		rotDeadzone:      0.1,   // Minimum rotation rate to process
+		controlType:      Flat,
+		sensitivity:      3.0,
+		friction:         0.98,
+		maxVelocity:      150.0,
+		accelDeadzone:    0.3,
+		rotDeadzone:      0.1,
 		stopPhysics:      make(chan struct{}),
 		lastUpdate:       time.Now(),
 		baselineAccelX:   0.0,
@@ -78,13 +78,13 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 		calibrationCount: 0,
 	}
 
-	// Start physics update loop
 	controller.startPhysicsLoop()
 
 	return controller, nil
 }
 
 // starts the physics integration loop that runs at 60fps
+// NOTE: we may wanna test this more later to see how far we can stretch it :)
 func (c *PacketController) startPhysicsLoop() {
 	c.isRunning = true
 	log.Println("Starting physics loop")
@@ -113,16 +113,15 @@ func (c *PacketController) updatePhysics() {
 	dt := now.Sub(c.lastUpdate).Seconds()
 	c.lastUpdate = now
 
-	if dt > 0.1 { // Cap delta time to prevent large jumps
+	if dt > 0.1 { // cap delta time to prevent large jumps
 		dt = 0.1
 	}
 
-	// Apply friction to velocity
 	c.velocityX *= c.friction
 	c.velocityY *= c.friction
 
-	// Snap to zero when velocity is very small (prevents oscillation)
-	velocityThreshold := 0.2 // Match low velocity threshold for consistency
+	// snap to zero when velocity is very small (prevents oscillation)
+	velocityThreshold := 0.2 // match low velocity threshold for consistency
 	if math.Abs(c.velocityX) < velocityThreshold {
 		c.velocityX = 0
 	}
@@ -133,7 +132,7 @@ func (c *PacketController) updatePhysics() {
 		c.velocityY = 0
 	}
 
-	// Cap velocity
+	// cap velocity
 	if c.velocityX > c.maxVelocity {
 		c.velocityX = c.maxVelocity
 	} else if c.velocityX < -c.maxVelocity {
@@ -145,11 +144,11 @@ func (c *PacketController) updatePhysics() {
 		c.velocityY = -c.maxVelocity
 	}
 
-	// Convert velocity to mouse movement
-	deltaX := int32(c.velocityX * 15.0) // Much higher scaling for motion control
+	// convert velocity to mouse movement
+	deltaX := int32(c.velocityX * 15.0)
 	deltaY := int32(c.velocityY * 15.0)
 
-	// Only move if there's meaningful velocity
+	// only move if there's meaningful velocity
 	if deltaX != 0 || deltaY != 0 {
 		log.Printf("Physics mouse move: vx=%.2f, vy=%.2f, dx=%d, dy=%d", c.velocityX, c.velocityY, deltaX, deltaY)
 		err := c.mouse.MoveRelative(deltaX, deltaY)
@@ -164,7 +163,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
 
-	// Subtract calibration baselines
+	// subtract calibration baselines
 	accelX -= c.baselineAccelX
 	accelY -= c.baselineAccelY
 	accelZ -= c.baselineAccelZ
@@ -173,44 +172,41 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 	rotGamma -= c.baselineRotGamma
 
 	if c.controlType == Flat {
-		// Only apply acceleration if:
-		// 1. Velocity is near zero (starting from rest), OR
-		// 2. Acceleration is in the same direction as current velocity
+		// only apply acceleration if:
+		//
+		//    Velocity is near zero (starting from rest)
+		//                           OR
+		//    Acceleration is in the same direction as current velocity
+		//
 		// This prevents deceleration from reversing direction
 
-		// Calculate dt for proper time integration
+		// calculate dt for proper time integration
 		dt := time.Since(c.lastUpdate).Seconds()
 		c.lastUpdate = time.Now()
-		if dt > 0.1 { // Cap dt to prevent large jumps
+
+		// cap dt to prevent large jump
+		if dt > 0.1 {
 			dt = 0.016
 		}
 
-		// Adaptive commitment thresholds tuned for motion control
-		const lowVelocityThreshold = 1.0  // Higher threshold for motion velocities
-		const highVelocityThreshold = 8.0 // Much higher for strong motion commitment
+		const lowVelocityThreshold = 1.0
+		const highVelocityThreshold = 8.0
 
-		// Handle X axis (accelX controls X movement - horizontal mouse)
 		if math.Abs(accelX) > c.accelDeadzone {
 			shouldAccelerate := false
 
 			if math.Abs(c.velocityX) < lowVelocityThreshold {
-				// Low velocity: allow any direction change (fully reactive)
 				shouldAccelerate = true
 			} else if accelX*c.velocityX > 0 {
-				// Same direction: always accelerate
 				shouldAccelerate = true
 			} else if math.Abs(c.velocityX) < highVelocityThreshold {
-				// Medium velocity, opposite direction: allow reversal
 				shouldAccelerate = true
 			}
-			// High velocity + opposite direction: maintain commitment (no acceleration)
-
 			if shouldAccelerate {
-				c.velocityX += -accelX * c.sensitivity * dt * 50 // Tuned scaling for motion control
+				c.velocityX += -accelX * c.sensitivity * dt * 50
 			}
 		}
 
-		// Handle Y axis (accelY controls Y movement - vertical mouse)
 		if math.Abs(accelY) > c.accelDeadzone {
 			shouldAccelerate := false
 
@@ -223,7 +219,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			}
 
 			if shouldAccelerate {
-				c.velocityY += accelY * c.sensitivity * dt * 50 // Tuned scaling for motion control
+				c.velocityY += accelY * c.sensitivity * dt * 50
 			}
 		}
 
@@ -232,10 +228,10 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 		// Remote mode: use rotation for velocity, with deadzone
 		// Use rotAlpha (yaw) for X movement, rotBeta (pitch) for Y movement
 		if math.Abs(rotAlpha) > c.rotDeadzone {
-			c.velocityY -= rotAlpha * 0.05 // Reduced sensitivity for handheld mode
+			c.velocityY -= rotAlpha * 0.05
 		}
 		if math.Abs(rotGamma) > c.rotDeadzone {
-			c.velocityX -= rotGamma * 0.05 // Reduced sensitivity for handheld mode
+			c.velocityX -= rotGamma * 0.05
 		}
 		log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
 	}
@@ -243,8 +239,6 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 
 func (c *PacketController) SetControlType(ct ControlType) {
 	c.controlType = ct
-
-	// Reset velocity when switching modes
 	c.physicsMu.Lock()
 	c.velocityX = 0
 	c.velocityY = 0
@@ -275,7 +269,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
 		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, accel_z=%.2f, rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
-		// Update physics state with new acceleration data
 		c.updateMotion(p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
 		return nil
 
@@ -335,7 +328,6 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		} else {
 			log.Println("Calibration done: no samples collected, baselines remain 0")
 		}
-		// Reset accumulators
 		c.sumAccelX = 0.0
 		c.sumAccelY = 0.0
 		c.sumAccelZ = 0.0

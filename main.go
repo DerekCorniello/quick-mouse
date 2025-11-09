@@ -36,6 +36,7 @@ func getLocalIP() string {
 }
 
 // landingPageHandler serves an HTML page with a WebSocket test client
+// this is soley for testing
 func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 	localIP := getLocalIP()
 	wsURL := fmt.Sprintf("wss://%s:3000/ws", localIP)
@@ -364,7 +365,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Now process other packets
+	// main processing loop
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -438,11 +439,11 @@ func main() {
 	}
 	defer controller.Close()
 
-	// Serve static files from the React build directory
+	// serve static files from the React build directory
 	fs := http.FileServer(http.Dir("./client/build"))
 	http.Handle("/", fs)
 
-	// Keep test UI available on /test route
+	// keep test UI available on /test route
 	http.HandleFunc("/test", landingPageHandler)
 	http.HandleFunc("/ws", wsHandler)
 	updateDisplay()
