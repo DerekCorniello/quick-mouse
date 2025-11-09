@@ -83,6 +83,10 @@ REM Install Go dependencies
 echo Installing Go dependencies...
 go mod tidy
 
+REM Build the Go executable
+echo Building the Go executable...
+go build -o quick-mouse
+
 REM Build the client
 echo Building the client...
 cd client
@@ -100,10 +104,11 @@ openssl req -x509 -newkey rsa:4096 -keyout certs\localhost-key.pem -out certs\lo
 if %errorlevel% equ 0 (
     echo Installation completed successfully!
     echo Files created:
+    echo   - quick-mouse.exe (executable)
     echo   - certs\localhost.pem
     echo   - certs\localhost-key.pem
     echo.
-    echo You can now run the server with: go run main.go
+    echo You can now run the server with: quick-mouse.exe
 ) else (
     echo Error: Failed to generate certificates.
     exit /b 1

@@ -109,6 +109,10 @@ install_package openssl $MANAGER
 echo "Installing Go dependencies..."
 go mod tidy
 
+# Build the Go executable
+echo "Building the Go executable..."
+go build -o quick-mouse
+
 # Build the client
 echo "Building the client..."
 cd client
@@ -126,10 +130,11 @@ openssl req -x509 -newkey rsa:4096 -keyout certs/localhost-key.pem -out certs/lo
 if [ $? -eq 0 ]; then
     echo "Installation completed successfully!"
     echo "Files created:"
+    echo "  - quick-mouse (executable)"
     echo "  - certs/localhost.pem"
     echo "  - certs/localhost-key.pem"
     echo ""
-    echo "You can now run the server with: go run main.go"
+    echo "You can now run the server with: ./quick-mouse"
 else
     echo "Error: Failed to generate certificates."
     exit 1
