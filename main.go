@@ -38,7 +38,7 @@ func getLocalIP() string {
 // landingPageHandler serves an HTML page with a WebSocket test client
 func landingPageHandler(w http.ResponseWriter, r *http.Request) {
 	localIP := getLocalIP()
-	wsURL := fmt.Sprintf("ws://%s:3000/ws", localIP)
+	wsURL := fmt.Sprintf("wss://%s:3000/ws", localIP)
 	key := r.URL.Query().Get("key")
 
 	html := `<!DOCTYPE html>
@@ -251,7 +251,7 @@ func updateDisplay() {
 		fmt.Println("Status: Device connected")
 	} else {
 		localIP := getLocalIP()
-		httpURL := fmt.Sprintf("http://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
+		httpURL := fmt.Sprintf("https://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
 
 		fmt.Print("Scan this QR code to connect:\n\n")
 		qrterminal.GenerateWithConfig(httpURL, qrterminal.Config{
@@ -438,12 +438,17 @@ func main() {
 	}
 	defer controller.Close()
 
-	http.HandleFunc("/", landingPageHandler)
+	// Serve static files from the React build directory
+	fs := http.FileServer(http.Dir("./client/build"))
+	http.Handle("/", fs)
+
+	// Keep test UI available on /test route
+	http.HandleFunc("/test", landingPageHandler)
 	http.HandleFunc("/ws", wsHandler)
 	updateDisplay()
 
-	err = http.ListenAndServe(":3000", nil)
+	err = http.ListenAndServeTLS(":3000", "certs/server.pem", "certs/server-key.pem", nil)
 	if err != nil {
-		log.Fatal("Error starting server:", err)
+		log.Fatal("Error starting HTTPS server:", err)
 	}
 }

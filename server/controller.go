@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"log"
+	"sync"
+	"time"
 )
 
 // takes incoming packets from the websocket and translates them
@@ -10,6 +12,17 @@ import (
 type PacketController struct {
 	mouse       *UniversalMouse
 	controlType ControlType
+
+	// Physics state for device motion integration
+	physicsMu   sync.RWMutex
+	velocityX   float64
+	velocityY   float64
+	lastUpdate  time.Time
+	sensitivity float64
+	friction    float64
+	maxVelocity float64
+	isRunning   bool
+	stopPhysics chan struct{}
 }
 
 // initializes the packet controller with a mouse backend
@@ -20,10 +33,95 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 		return nil, fmt.Errorf("failed to initialize mouse: %v", err)
 	}
 
-	return &PacketController{
+	controller := &PacketController{
 		mouse:       mouse,
 		controlType: defaultMode,
-	}, nil
+		sensitivity: 1.5,   // Acceleration to velocity conversion factor
+		friction:    0.92,  // Velocity decay per frame (8% loss)
+		maxVelocity: 100.0, // Maximum velocity cap
+		stopPhysics: make(chan struct{}),
+		lastUpdate:  time.Now(),
+	}
+
+	// Start physics update loop
+	controller.startPhysicsLoop()
+
+	return controller, nil
+}
+
+// starts the physics integration loop that runs at 60fps
+func (c *PacketController) startPhysicsLoop() {
+	c.isRunning = true
+	log.Println("Starting physics loop")
+	go func() {
+		ticker := time.NewTicker(16 * time.Millisecond) // ~60fps
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				c.updatePhysics()
+			case <-c.stopPhysics:
+				log.Println("Stopping physics loop")
+				return
+			}
+		}
+	}()
+}
+
+// updates physics state and sends mouse movements
+func (c *PacketController) updatePhysics() {
+	c.physicsMu.Lock()
+	defer c.physicsMu.Unlock()
+
+	now := time.Now()
+	dt := now.Sub(c.lastUpdate).Seconds()
+	c.lastUpdate = now
+
+	if dt > 0.1 { // Cap delta time to prevent large jumps
+		dt = 0.1
+	}
+
+	// Apply friction to velocity
+	c.velocityX *= c.friction
+	c.velocityY *= c.friction
+
+	// Cap velocity
+	if c.velocityX > c.maxVelocity {
+		c.velocityX = c.maxVelocity
+	} else if c.velocityX < -c.maxVelocity {
+		c.velocityX = -c.maxVelocity
+	}
+	if c.velocityY > c.maxVelocity {
+		c.velocityY = c.maxVelocity
+	} else if c.velocityY < -c.maxVelocity {
+		c.velocityY = -c.maxVelocity
+	}
+
+	// Convert velocity to mouse movement
+	deltaX := int32(c.velocityX * 2.5) // Scale factor for mouse sensitivity
+	deltaY := int32(c.velocityY * 2.5)
+
+	// Only move if there's meaningful velocity
+	if deltaX != 0 || deltaY != 0 {
+		log.Printf("Physics mouse move: vx=%.2f, vy=%.2f, dx=%d, dy=%d", c.velocityX, c.velocityY, deltaX, deltaY)
+		err := c.mouse.MoveRelative(deltaX, deltaY)
+		if err != nil {
+			log.Printf("Physics mouse move error: %v", err)
+		}
+	}
+}
+
+// updates velocity based on device acceleration
+func (c *PacketController) updateMotion(accelX, accelY float64) {
+	c.physicsMu.Lock()
+	defer c.physicsMu.Unlock()
+
+	// Integrate acceleration into velocity
+	c.velocityX += accelX * c.sensitivity
+	c.velocityY += accelY * c.sensitivity
+
+	log.Printf("Updated motion: accel=(%.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, c.velocityX, c.velocityY)
 }
 
 func (c *PacketController) SetControlType(ct ControlType) {
@@ -50,6 +148,13 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		default:
 			return fmt.Errorf("unknown control type: %d", controlType)
 		}
+
+	case DeviceMotion:
+		p := packet.(*DeviceMotionPacket)
+		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.Timestamp)
+		// Update physics state with new acceleration data
+		c.updateMotion(p.AccelX, p.AccelY)
+		return nil
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
@@ -91,5 +196,11 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 // shuts down the mouse backend and releases any system resources
 // important to call this when the server shuts down to avoid leaving devices in bad states
 func (c *PacketController) Close() error {
+	// Stop physics loop
+	if c.isRunning {
+		close(c.stopPhysics)
+		c.isRunning = false
+	}
+
 	return c.mouse.Close()
 }

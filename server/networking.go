@@ -23,10 +23,12 @@ import (
 type PacketType string
 
 // NOTE: this is where we add more packets as needed, so we can add more later for
-//		 presentation mode and whatnot
+//
+//	presentation mode and whatnot
 const (
 	Auth           PacketType = "auth"
 	MouseMove      PacketType = "mouse_move"
+	DeviceMotion   PacketType = "device_motion"
 	LeftClickUp    PacketType = "left_click_up"
 	RightClickUp   PacketType = "right_click_up"
 	LeftClickDown  PacketType = "left_click_down"
@@ -48,6 +50,7 @@ const (
 var packetRegistry = map[PacketType]func() Packet{
 	Auth:           func() Packet { return &AuthPacket{} },
 	MouseMove:      func() Packet { return &MouseMovePacket{} },
+	DeviceMotion:   func() Packet { return &DeviceMotionPacket{} },
 	LeftClickUp:    func() Packet { return &LeftClickUpPacket{} },
 	RightClickUp:   func() Packet { return &RightClickUpPacket{} },
 	LeftClickDown:  func() Packet { return &LeftClickDownPacket{} },
@@ -79,6 +82,16 @@ type MouseMovePacket struct {
 
 func (p MouseMovePacket) Type() PacketType {
 	return MouseMove
+}
+
+type DeviceMotionPacket struct {
+	AccelX    float64 `json:"accel_x"`
+	AccelY    float64 `json:"accel_y"`
+	Timestamp int64   `json:"timestamp"`
+}
+
+func (p DeviceMotionPacket) Type() PacketType {
+	return DeviceMotion
 }
 
 type ScrollMovePacket struct {

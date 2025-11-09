@@ -5,6 +5,11 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MouseIcon from "@mui/icons-material/Mouse";
+import WifiIcon from "@mui/icons-material/Wifi";
+import WifiOffIcon from "@mui/icons-material/WifiOff";
+import ErrorIcon from "@mui/icons-material/Error";
+import CircularProgress from "@mui/material/CircularProgress";
+import Box from "@mui/material/Box";
 import SettingsModal from "./SettingsModal";
 
 export function Header({
@@ -16,6 +21,7 @@ export function Header({
   onToggleButtonPosition,
   isTable,
   onToggleIsTable,
+  connectionStatus,
 }: {
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
@@ -25,6 +31,7 @@ export function Header({
   onToggleButtonPosition: () => void;
   isTable: boolean;
   onToggleIsTable: () => void;
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -48,6 +55,20 @@ export function Header({
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Quick Mouse
         </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+          {connectionStatus === 'connecting' && (
+            <CircularProgress size={20} color="inherit" />
+          )}
+          {connectionStatus === 'connected' && (
+            <WifiIcon sx={{ color: 'success.main' }} />
+          )}
+          {connectionStatus === 'disconnected' && (
+            <WifiOffIcon sx={{ color: 'warning.main' }} />
+          )}
+          {connectionStatus === 'error' && (
+            <ErrorIcon sx={{ color: 'error.main' }} />
+          )}
+        </Box>
         <IconButton
           edge="end"
           color="inherit"
