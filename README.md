@@ -27,11 +27,11 @@ Run the install command.
 ### Windows
 
 ```bash
-  curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
+  curl -s https://github.com/DerekCorniello/raw/main/setup.bat | cmd
 ```
 
 ```bash
- iex (iwr https://raw.githubusercontent.com/user/repo/main/script.bat -UseBasicParsing).Content curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
+ iex (iwr https://github.com/DerekCorniello/raw/main/setup.bat -UseBasicParsing).Content
 ```
 
 ## Getting Started
