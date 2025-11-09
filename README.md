@@ -21,17 +21,17 @@ Run the install command.
 ### Linux and MacOS
 
 ```bash
-  curl -fsSl https://github.com/DerekCorniello/raw/main/setup.sh | bash
+  curl -fsSl https://github.com/DerekCorniello/quick-mouse/raw/main/setup.sh | bash
 ```
 
 ### Windows
 
 ```bash
-  curl -s https://github.com/DerekCorniello/raw/main/setup.bat | cmd
+  curl -s https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat | cmd
 ```
 
 ```bash
- iex (iwr https://github.com/DerekCorniello/raw/main/setup.bat -UseBasicParsing).Content
+ iex (iwr https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat -UseBasicParsing).Content
 ```
 
 ## Getting Started
