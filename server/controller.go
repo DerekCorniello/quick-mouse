@@ -168,19 +168,29 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	switch packet.Type() {
 	case MouseMove:
 		p := packet.(*MouseMovePacket)
-		log.Printf("Moving mouse: dx=%d, dy=%d", p.DeltaX, p.DeltaY)
-		return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
+		sensitivity := p.PointerSensitivity / 10.0
+		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
+		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
+		log.Printf("Moving mouse: dx=%d, dy=%d, sensitivity=%.2f, scaled_dx=%d, scaled_dy=%d", p.DeltaX, p.DeltaY, sensitivity, scaledDeltaX, scaledDeltaY)
+		return c.mouse.MoveRelative(scaledDeltaX, scaledDeltaY)
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		log.Printf("Device motion: rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
-		c.updateMotion(p.RotAlpha, p.RotBeta, p.RotGamma)
+		sensitivity := p.PointerSensitivity / 10.0
+		scaledRotAlpha := p.RotAlpha * sensitivity
+		scaledRotBeta := p.RotBeta * sensitivity
+		scaledRotGamma := p.RotGamma * sensitivity
+		log.Printf("Device motion: rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, sensitivity=%.2f, scaled_rot=(%.2f, %.2f, %.2f), timestamp=%d", p.RotAlpha, p.RotBeta, p.RotGamma, sensitivity, scaledRotAlpha, scaledRotBeta, scaledRotGamma, p.Timestamp)
+		c.updateMotion(scaledRotAlpha, scaledRotBeta, scaledRotGamma)
 		return nil
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
-		log.Printf("Scrolling: delta_x=%d, delta_y=%d", p.DeltaX, p.DeltaY)
-		return c.mouse.Scroll(p.DeltaX, p.DeltaY)
+		sensitivity := p.ScrollSensitivity / 10.0
+		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
+		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
+		log.Printf("Scrolling: delta_x=%d, delta_y=%d, sensitivity=%.2f, scaled_dx=%d, scaled_dy=%d", p.DeltaX, p.DeltaY, sensitivity, scaledDeltaX, scaledDeltaY)
+		return c.mouse.Scroll(scaledDeltaX, scaledDeltaY)
 
 	case LeftClickUp:
 		log.Println("Left click up")
