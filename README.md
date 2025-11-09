@@ -16,38 +16,27 @@ Quick Mouse was built by UC computer science students who needed a reliable way 
 
 ## Installation
 
+Run the install command.
+
+### Linux and MacOS
+
+```bash
+  curl -fsSl https://github.com/DerekCorniello/raw/main/setup.sh | bash
+```
+
 ### Windows
 
-1. Download the latest release
-2. Run the installation script:
-   ```bash
-   setup.bat
-   ```
-3. Launch Quick Mouse Desktop from your Start Menu
+```bash
+  curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
+```
 
-### Linux
-
-1. Download the latest release
-2. Make the script executable and run:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-3. Launch Quick Mouse Desktop from your applications menu
-
-### macOS
-
-1. Download the latest release
-2. Run the installation script:
-   ```bash
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-3. Launch Quick Mouse Desktop from your Applications folder
+```bash
+ iex (iwr https://raw.githubusercontent.com/user/repo/main/script.bat -UseBasicParsing).Content curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
+```
 
 ## Getting Started
 
-1. **Start the Desktop App**: Launch Quick Mouse on your computer
+1. **Start the App**: Launch Quick Mouse on your computer by running `quick-mouse` in your terminal
 2. **Scan QR Code**: Open Quick Mouse on your phone and scan the displayed QR code
 3. **Start Controlling**: Your phone is now a wireless mouse
 
