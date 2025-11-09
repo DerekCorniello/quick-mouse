@@ -92,7 +92,7 @@ export function Touchpad({
         <TouchAppIcon sx={{ fontSize: 64, color: "text.secondary", mb: 1 }} />
         <Box component="p" sx={{ color: "text.secondary" }}>
           {permissionState === "granted"
-            ? "Swipe to scroll"
+            ? "Move finger to control mouse, two fingers to scroll"
             : "Waiting for permissions..."}
         </Box>
       </Box>
