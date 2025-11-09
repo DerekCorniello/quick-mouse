@@ -91,6 +91,15 @@ func (c *PacketController) updatePhysics() {
 	c.velocityX *= c.friction
 	c.velocityY *= c.friction
 
+	// Snap to zero when velocity is very small (prevents oscillation)
+	velocityThreshold := 0.5
+	if math.Abs(c.velocityX) < velocityThreshold {
+		c.velocityX = 0
+	}
+	if math.Abs(c.velocityY) < velocityThreshold {
+		c.velocityY = 0
+	}
+
 	// Cap velocity
 	if c.velocityX > c.maxVelocity {
 		c.velocityX = c.maxVelocity
@@ -123,14 +132,29 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 	defer c.physicsMu.Unlock()
 
 	if c.controlType == Flat {
-		// Table mode: use acceleration for velocity, with deadzone
-		// Use accelX for Y (forward/back tilt), accelY for X (left/right tilt)
+		// Only apply acceleration if:
+		// 1. Velocity is near zero (starting from rest), OR
+		// 2. Acceleration is in the same direction as current velocity
+		// This prevents deceleration from reversing direction
+		
+		// Handle X axis (accelY controls X movement)
 		if math.Abs(accelY) > c.accelDeadzone {
-			c.velocityX += accelY * c.sensitivity
+			if math.Abs(c.velocityX) < 1.0 || (accelY*c.velocityX > 0) {
+				// Either starting from rest or accelerating in same direction
+				c.velocityX += accelY * c.sensitivity
+			}
+			// Otherwise: ignore this acceleration (it's deceleration opposing our motion)
 		}
+		
+		// Handle Y axis (accelX controls Y movement)
 		if math.Abs(accelX) > c.accelDeadzone {
-			c.velocityY += accelX * c.sensitivity
+			if math.Abs(c.velocityY) < 1.0 || (accelX*c.velocityY > 0) {
+				// Either starting from rest or accelerating in same direction
+				c.velocityY += accelX * c.sensitivity
+			}
+			// Otherwise: ignore this acceleration (it's deceleration opposing our motion)
 		}
+		
 		log.Printf("Table mode motion: accel=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, accelZ, c.velocityX, c.velocityY)
 	} else { // Remote
 		// Remote mode: use rotation for velocity, with deadzone
@@ -147,6 +171,12 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 
 func (c *PacketController) SetControlType(ct ControlType) {
 	c.controlType = ct
+	
+	// Reset velocity when switching modes
+	c.physicsMu.Lock()
+	c.velocityX = 0
+	c.velocityY = 0
+	c.physicsMu.Unlock()
 }
 
 // takes a deserialized packet and executes the corresponding mouse action
