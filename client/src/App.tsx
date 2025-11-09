@@ -6,6 +6,7 @@ import { SensorLog } from "./components/SensorLog";
 import { PermissionPrompt } from "./components/PermissionPrompt";
 import { CalibrationDialog } from "./components/CalibrationDialog";
 
+
 export default function App() {
   const [cursorPosition, setCursorPosition] = useState({ x: 50, y: 50 });
   const [isLeftPressed, setIsLeftPressed] = useState(false);
@@ -13,17 +14,6 @@ export default function App() {
   const [touchActive, setTouchActive] = useState(false);
   const [pointerSensitivity, setPointerSensitivity] = useState(5);
   const [scrollSensitivity, setScrollSensitivity] = useState(5);
-  const pointerSensitivityRef = useRef(5);
-  const scrollSensitivityRef = useRef(5);
-
-  // Keep refs in sync with state
-  useEffect(() => {
-    pointerSensitivityRef.current = pointerSensitivity;
-  }, [pointerSensitivity]);
-
-  useEffect(() => {
-    scrollSensitivityRef.current = scrollSensitivity;
-  }, [scrollSensitivity]);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
   const [isTable, setIsTable] = useState(true);
@@ -31,9 +21,9 @@ export default function App() {
   const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
-  const calibrationCountRef = useRef(0);
-  const [calibrationStarted, setCalibrationStarted] = useState(false);
-  const [calibrationComplete, setCalibrationComplete] = useState(false);
+   const calibrationCountRef = useRef(0);
+   const [calibrationStarted, setCalibrationStarted] = useState(false);
+   const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
 
   const handlePause = useCallback(() => {
@@ -43,7 +33,6 @@ export default function App() {
   const handleResume = useCallback(() => {
     isPausedRef.current = false;
   }, []);
-  const initialTouchesRef = useRef<{ id: number; x: number; y: number }[]>([]);
 
   const handleCalibrationComplete = useCallback(() => {
     setAppPhase("main");
@@ -60,6 +49,8 @@ export default function App() {
     setCalibrationComplete(false);
   }, []);
 
+
+
   const handlePermissionsGranted = useCallback(() => {
     setAppPhase("calibrating");
     calibrationCountRef.current = 0;
@@ -70,9 +61,7 @@ export default function App() {
   const touchpadRef = useRef<HTMLDivElement>(null);
 
   // App phase
-  const [appPhase, setAppPhase] = useState<
-    "permissions" | "calibrating" | "main"
-  >("permissions");
+  const [appPhase, setAppPhase] = useState<"permissions" | "calibrating" | "main">("permissions");
 
   // WebSocket connection state
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -227,19 +216,6 @@ export default function App() {
             console.error("Invalid packet rot_gamma value:", packet.rot_gamma);
             return;
           }
-          if (
-            packet.sensitivity !== undefined &&
-            (typeof packet.sensitivity !== "number" ||
-              !Number.isFinite(packet.sensitivity) ||
-              isNaN(packet.sensitivity) ||
-              packet.sensitivity < 0)
-          ) {
-            console.error(
-              "Invalid packet sensitivity value:",
-              packet.sensitivity,
-            );
-            return;
-          }
 
           const message = JSON.stringify(packet);
           ws.send(message);
@@ -268,8 +244,7 @@ export default function App() {
         return;
       }
 
-      const acceleration =
-        event.acceleration || event.accelerationIncludingGravity;
+      const acceleration = event.acceleration || event.accelerationIncludingGravity;
       const movement = event.rotationRate;
       if (!acceleration) {
         return;
@@ -285,28 +260,24 @@ export default function App() {
       const rotBeta = Number(movement?.beta) || 0;
       const rotGamma = Number(movement?.gamma) || 0;
 
-      if (
-        appPhase === "calibrating" &&
-        calibrationStarted &&
-        !calibrationComplete
-      ) {
-        // Send calibration packet
-        sendPacket({
-          type: "calibration",
-          accel_x: accelX,
-          accel_y: accelY,
-          accel_z: accelZ,
-          rot_alpha: rotAlpha,
-          rot_beta: rotBeta,
-          rot_gamma: rotGamma,
-          timestamp: Date.now(),
-        });
-        calibrationCountRef.current += 1;
-        if (calibrationCountRef.current >= 100) {
-          sendPacket({ type: "calibration_done" });
-          setCalibrationComplete(true);
-        }
-      } else if (appPhase === "main") {
+       if (appPhase === "calibrating" && calibrationStarted && !calibrationComplete) {
+         // Send calibration packet
+         sendPacket({
+           type: "calibration",
+           accel_x: accelX,
+           accel_y: accelY,
+           accel_z: accelZ,
+           rot_alpha: rotAlpha,
+           rot_beta: rotBeta,
+           rot_gamma: rotGamma,
+           timestamp: Date.now(),
+         });
+          calibrationCountRef.current += 1;
+          if (calibrationCountRef.current >= 100) {
+            sendPacket({ type: "calibration_done" });
+            setCalibrationComplete(true);
+          }
+        } else if (appPhase === "main") {
         // Send normal device_motion packet
         sendPacket({
           type: "device_motion",
@@ -317,7 +288,6 @@ export default function App() {
           rot_beta: rotBeta,
           rot_gamma: rotGamma,
           timestamp: Date.now(),
-          sensitivity: pointerSensitivityRef.current,
         });
       }
     },
@@ -391,36 +361,37 @@ export default function App() {
     return () => clearInterval(healthCheck);
   }, [lastMessageTime, connectionStatus, authKey, connectWebSocket]);
 
-  // Add device motion listener on mount
-  useEffect(() => {
-    if (typeof DeviceMotionEvent !== "undefined") {
-      window.addEventListener("devicemotion", handleDeviceMotion);
-    }
-    return () => {
-      window.removeEventListener("devicemotion", handleDeviceMotion);
-    };
-  }, [handleDeviceMotion]);
+   // Add device motion listener on mount
+   useEffect(() => {
+     if (typeof DeviceMotionEvent !== "undefined") {
+       window.addEventListener("devicemotion", handleDeviceMotion);
+     }
+     return () => {
+       window.removeEventListener("devicemotion", handleDeviceMotion);
+     };
+   }, [handleDeviceMotion]);
 
-  // Handle calibration completion delay
-  useEffect(() => {
-    if (calibrationComplete) {
-      const timer = setTimeout(() => {
-        setAppPhase("main");
-        setCalibrationComplete(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [calibrationComplete]);
+   // Handle calibration completion delay
+   useEffect(() => {
+     if (calibrationComplete) {
+       const timer = setTimeout(() => {
+         setAppPhase("main");
+         setCalibrationComplete(false);
+       }, 1000);
+       return () => clearTimeout(timer);
+     }
+   }, [calibrationComplete]);
+
+
+
+
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
     if (appPhase !== "main") return;
 
-    initialTouchesRef.current = Array.from(e.touches).map((touch) => ({
-      id: touch.identifier,
-      x: touch.clientX,
-      y: touch.clientY,
-    }));
+    const touch = e.touches[0];
+    lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
     setTouchActive(true);
   };
 
@@ -430,93 +401,55 @@ export default function App() {
     e.preventDefault();
     if (!lastTouchRef.current || appPhase !== "main") return;
 
-    const currentTouches = Array.from(e.touches);
+    const touch = e.touches[0];
+    const deltaX =
+      (touch.clientX - lastTouchRef.current.x) * pointerSensitivity;
+    const deltaY =
+      (touch.clientY - lastTouchRef.current.y) * pointerSensitivity;
 
-    if (currentTouches.length === 1) {
-      // Mouse control
-      const touch = currentTouches[0];
-      const initial = initialTouchesRef.current.find(
-        (t) => t.id === touch.identifier,
-      );
-      if (!initial) return;
-
-      const rawDeltaX = touch.clientX - initial.x;
-      const rawDeltaY = touch.clientY - initial.y;
-
-      if (!Number.isFinite(rawDeltaX) || !Number.isFinite(rawDeltaY)) {
-        console.error("Invalid touch delta values");
-        return;
-      }
-
-      sendPacket({
-        type: "mouse_move",
-        x: Math.round(rawDeltaX),
-        y: Math.round(rawDeltaY),
-        sensitivity: pointerSensitivityRef.current,
-      });
-
-      // Update visual feedback (apply sensitivity for UI)
-      const deltaX = rawDeltaX * pointerSensitivity;
-      const deltaY = rawDeltaY * pointerSensitivity;
-      setCursorPosition((prev) => ({
-        x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
-        y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
-      }));
-    } else if (currentTouches.length >= 2) {
-      // Scroll
-      const touch = currentTouches[0];
-      const initial = initialTouchesRef.current.find(
-        (t) => t.id === touch.identifier,
-      );
-      if (!initial) return;
-
-      const rawDeltaX = touch.clientX - initial.x;
-      const rawDeltaY = touch.clientY - initial.y;
-
-      if (!Number.isFinite(rawDeltaX) || !Number.isFinite(rawDeltaY)) {
-        console.error("Invalid touch delta values");
-        return;
-      }
-
-      // Calculate swipe direction and magnitude for UI feedback (apply sensitivity for UI)
-      const deltaX = rawDeltaX * scrollSensitivity;
-      const deltaY = rawDeltaY * scrollSensitivity;
-      const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      setSwipeMagnitude(Math.round(magnitude));
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        setSwipeDirection(deltaX > 0 ? "Right" : "Left");
-      } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
-        setSwipeDirection(deltaY > 0 ? "Down" : "Up");
-      } else {
-        const horizontal = deltaX > 0 ? "Right" : "Left";
-        const vertical = deltaY > 0 ? "Down" : "Up";
-        setSwipeDirection(`${vertical}-${horizontal}`);
-      }
-
-      // Only send scroll packets for meaningful movements
-      if (
-        Math.abs(deltaX) > SCROLL_THRESHOLD ||
-        Math.abs(deltaY) > SCROLL_THRESHOLD
-      ) {
-        sendPacket({
-          type: "scroll_move",
-          x: Math.round(rawDeltaX),
-          y: Math.round(rawDeltaY),
-          sensitivity: scrollSensitivityRef.current,
-        });
-      }
-
-      // Update visual feedback
-      setCursorPosition((prev) => ({
-        x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
-        y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
-      }));
+    // Validate touch data
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
+      console.error("Invalid touch delta values");
+      return;
     }
+
+    // Calculate swipe direction and magnitude for UI feedback
+    const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    setSwipeMagnitude(Math.round(magnitude));
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      setSwipeDirection(deltaX > 0 ? "Right" : "Left");
+    } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      setSwipeDirection(deltaY > 0 ? "Down" : "Up");
+    } else {
+      const horizontal = deltaX > 0 ? "Right" : "Left";
+      const vertical = deltaY > 0 ? "Down" : "Up";
+      setSwipeDirection(`${vertical}-${horizontal}`);
+    }
+
+    // Only send scroll packets for meaningful movements
+    if (
+      Math.abs(deltaX) > SCROLL_THRESHOLD ||
+      Math.abs(deltaY) > SCROLL_THRESHOLD
+    ) {
+      sendPacket({
+        type: "scroll_move",
+        x: Math.round(deltaX),
+        y: Math.round(deltaY),
+      });
+    }
+
+    // Update visual feedback
+    setCursorPosition((prev) => ({
+      x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
+      y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
+    }));
+
+    lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = () => {
-    initialTouchesRef.current = [];
+    lastTouchRef.current = null;
     setTouchActive(false);
     setSwipeDirection("None");
     setSwipeMagnitude(0);
@@ -556,32 +489,32 @@ export default function App() {
 
   return (
     <div>
-      <Header
-        pointerSensitivity={pointerSensitivity}
-        onPointerSensitivityChange={setPointerSensitivity}
-        scrollSensitivity={scrollSensitivity}
-        onScrollSensitivityChange={setScrollSensitivity}
-        showSensorLog={showSensorLog}
-        onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
-        buttonsAboveTouchpad={buttonsAboveTouchpad}
-        onToggleButtonPosition={() =>
-          setButtonsAboveTouchpad(!buttonsAboveTouchpad)
-        }
-        isTable={isTable}
-        onToggleIsTable={() => {
-          setIsTable(!isTable);
-          sendPacket({ type: "switch_mode" });
-        }}
-        naturalScroll={naturalScroll}
-        onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
-        onToggleSwapLeftRightClick={() =>
-          setSwapLeftRightClick(!swapLeftRightClick)
-        }
-        connectionStatus={connectionStatus}
-        onPause={handlePause}
-        onResume={handleResume}
-        onRecalibrate={handleRecalibrate}
-      />
+       <Header
+         pointerSensitivity={pointerSensitivity}
+         onPointerSensitivityChange={setPointerSensitivity}
+         scrollSensitivity={scrollSensitivity}
+         onScrollSensitivityChange={setScrollSensitivity}
+         showSensorLog={showSensorLog}
+         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
+         buttonsAboveTouchpad={buttonsAboveTouchpad}
+         onToggleButtonPosition={() =>
+           setButtonsAboveTouchpad(!buttonsAboveTouchpad)
+         }
+         isTable={isTable}
+         onToggleIsTable={() => {
+           setIsTable(!isTable);
+           sendPacket({ type: "switch_mode" });
+         }}
+         naturalScroll={naturalScroll}
+         onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
+         onToggleSwapLeftRightClick={() =>
+           setSwapLeftRightClick(!swapLeftRightClick)
+         }
+         connectionStatus={connectionStatus}
+         onPause={handlePause}
+         onResume={handleResume}
+         onRecalibrate={handleRecalibrate}
+       />
 
       <main
         style={{
@@ -624,7 +557,7 @@ export default function App() {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            permissionState={appPhase === "main" ? "granted" : "denied"}
+             permissionState={appPhase === "main" ? "granted" : "denied"}
           />
           {!buttonsAboveTouchpad && (
             <MouseButtons
@@ -654,12 +587,14 @@ export default function App() {
         />
       )}
 
-      {appPhase === "calibrating" && (
-        <CalibrationDialog
-          onCalibrationComplete={handleCalibrationComplete}
-          onStartCalibration={handleStartCalibration}
-        />
-      )}
+       {appPhase === "calibrating" && (
+         <CalibrationDialog
+           onCalibrationComplete={handleCalibrationComplete}
+           onStartCalibration={handleStartCalibration}
+         />
+       )}
+
+
     </div>
   );
 }
