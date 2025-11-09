@@ -56,7 +56,7 @@ export function PermissionPrompt({ onRequestPermissions, isRequesting }: Permiss
         Device Motion Control
       </Typography>
       <Typography sx={{ mb: 3, color: 'text.secondary', lineHeight: 1.6 }}>
-        This app uses your device's motion sensors to control the mouse cursor.
+        This app uses your device&apos;s motion sensors to control the mouse cursor.
         Your device movements will move the cursor, and touch gestures will scroll content.
       </Typography>
       <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary', fontStyle: 'italic' }}>

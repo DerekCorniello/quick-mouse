@@ -1,37 +1,43 @@
- import { useState, useRef, useEffect, useCallback } from "react";
- import { Header } from "./components/Header";
- import { MouseButtons } from "./components/MouseButtons";
- import { Touchpad } from "./components/Touchpad";
- import { SensorLog } from "./components/SensorLog";
- import { PermissionPrompt } from "./components/PermissionPrompt";
- import Box from "@mui/material/Box";
- import Button from "@mui/material/Button";
- import Typography from "@mui/material/Typography";
- import CircularProgress from "@mui/material/CircularProgress";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Header } from "./components/Header";
+import { MouseButtons } from "./components/MouseButtons";
+import { Touchpad } from "./components/Touchpad";
+import { SensorLog } from "./components/SensorLog";
+import { PermissionPrompt } from "./components/PermissionPrompt";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
 
 export default function App() {
   const [cursorPosition, setCursorPosition] = useState({ x: 50, y: 50 });
   const [isLeftPressed, setIsLeftPressed] = useState(false);
   const [isRightPressed, setIsRightPressed] = useState(false);
   const [touchActive, setTouchActive] = useState(false);
-  const [sensitivity, setSensitivity] = useState(2);
+  const [pointerSensitivity, setPointerSensitivity] = useState(2);
+  const [scrollSensitivity, setScrollSensitivity] = useState(2);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
   const [isTable, setIsTable] = useState(false);
+  const [naturalScroll, setNaturalScroll] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
   // Sensor permission state
-  const [permissionState, setPermissionState] = useState<'checking' | 'prompt' | 'requesting' | 'granted' | 'denied'>('checking');
-  const PERMISSION_STORAGE_KEY = 'device-motion-permission';
+  const [permissionState, setPermissionState] = useState<
+    "checking" | "prompt" | "requesting" | "granted" | "denied"
+  >("checking");
+  const PERMISSION_STORAGE_KEY = "device-motion-permission";
 
   // WebSocket connection state
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "error"
+  >("disconnected");
   const [lastMessageTime, setLastMessageTime] = useState(Date.now());
-  const [authKey, setAuthKey] = useState<string>('');
+  const [authKey, setAuthKey] = useState<string>("");
   const isMountedRef = useRef(true);
 
   type Packet = {
@@ -41,17 +47,17 @@ export default function App() {
 
   // WebSocket connection management
   const connectWebSocket = useCallback((key: string) => {
-    setConnectionStatus('connecting');
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    setConnectionStatus("connecting");
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
 
     const websocket = new WebSocket(wsUrl);
 
     websocket.onopen = () => {
       if (isMountedRef.current) {
-        setConnectionStatus('connected');
+        setConnectionStatus("connected");
         // Send auth packet immediately
-        const authPacket = { type: 'auth', key };
+        const authPacket = { type: "auth", key };
         websocket.send(JSON.stringify(authPacket));
       }
     };
@@ -61,18 +67,18 @@ export default function App() {
         setLastMessageTime(Date.now());
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'keep_alive') {
+          if (data.type === "keep_alive") {
             // Keep-alive from server, connection is healthy
           }
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error("Failed to parse WebSocket message:", error);
         }
       }
     };
 
     websocket.onclose = () => {
       if (isMountedRef.current) {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
         // Attempt to reconnect after a delay if component is still mounted
         setTimeout(() => {
           if (isMountedRef.current) {
@@ -84,132 +90,163 @@ export default function App() {
 
     websocket.onerror = (error) => {
       if (isMountedRef.current) {
-        console.error('WebSocket error:', error);
-        setConnectionStatus('error');
+        console.error("WebSocket error:", error);
+        setConnectionStatus("error");
       }
     };
 
     setWs(websocket);
   }, []);
 
-  const sendPacket = useCallback((packet: Packet) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        // Validate packet data before sending
-        if (!packet.type) {
-          console.error('Invalid packet: missing type');
-          return;
-        }
-
-        // Ensure numeric values are valid
-        if (packet.x !== undefined && (typeof packet.x !== 'number' || !Number.isFinite(packet.x) || isNaN(packet.x))) {
-          console.error('Invalid packet x value:', packet.x);
-          return;
-        }
-        if (packet.y !== undefined && (typeof packet.y !== 'number' || !Number.isFinite(packet.y) || isNaN(packet.y))) {
-          console.error('Invalid packet y value:', packet.y);
-          return;
-        }
-        if (packet.accel_x !== undefined && (typeof packet.accel_x !== 'number' || !Number.isFinite(packet.accel_x) || isNaN(packet.accel_x))) {
-          console.error('Invalid packet accel_x value:', packet.accel_x);
-          return;
-        }
-        if (packet.accel_y !== undefined && (typeof packet.accel_y !== 'number' || !Number.isFinite(packet.accel_y) || isNaN(packet.accel_y))) {
-          console.error('Invalid packet accel_y value:', packet.accel_y);
-          return;
-        }
-
-        const message = JSON.stringify(packet);
-        ws.send(message);
-
-      } catch (error) {
-        console.error('Failed to send packet:', error);
-        setConnectionStatus('error');
-
-        // Attempt reconnection after failed send
-        setTimeout(() => {
-          if (authKey && isMountedRef.current) {
-            connectWebSocket(authKey);
+  const sendPacket = useCallback(
+    (packet: Packet) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          // Validate packet data before sending
+          if (!packet.type) {
+            console.error("Invalid packet: missing type");
+            return;
           }
-        }, 2000);
-      }
-    } else {
-      console.warn('WebSocket not ready, packet not sent:', packet);
-    }
-  }, [ws, authKey, connectWebSocket]);
 
-  // Device motion sensitivity constants
-  const ACCEL_DEADZONE = 0.01; // Minimum acceleration to send
-  const MOTION_UPDATE_RATE = 1000 / 60; // 60fps updates
+          // Ensure numeric values are valid
+          if (
+            packet.x !== undefined &&
+            (typeof packet.x !== "number" ||
+              !Number.isFinite(packet.x) ||
+              isNaN(packet.x))
+          ) {
+            console.error("Invalid packet x value:", packet.x);
+            return;
+          }
+          if (
+            packet.y !== undefined &&
+            (typeof packet.y !== "number" ||
+              !Number.isFinite(packet.y) ||
+              isNaN(packet.y))
+          ) {
+            console.error("Invalid packet y value:", packet.y);
+            return;
+          }
+          if (
+            packet.accel_x !== undefined &&
+            (typeof packet.accel_x !== "number" ||
+              !Number.isFinite(packet.accel_x) ||
+              isNaN(packet.accel_x))
+          ) {
+            console.error("Invalid packet accel_x value:", packet.accel_x);
+            return;
+          }
+          if (
+            packet.accel_y !== undefined &&
+            (typeof packet.accel_y !== "number" ||
+              !Number.isFinite(packet.accel_y) ||
+              isNaN(packet.accel_y))
+          ) {
+            console.error("Invalid packet accel_y value:", packet.accel_y);
+            return;
+          }
+
+          const message = JSON.stringify(packet);
+          ws.send(message);
+        } catch (error) {
+          console.error("Failed to send packet:", error);
+          setConnectionStatus("error");
+
+          // Attempt reconnection after failed send
+          setTimeout(() => {
+            if (authKey && isMountedRef.current) {
+              connectWebSocket(authKey);
+            }
+          }, 2000);
+        }
+      } else {
+        console.warn("WebSocket not ready, packet not sent:", packet);
+      }
+    },
+    [ws, authKey, connectWebSocket],
+  );
 
   // Device motion handlers
-  const handleDeviceMotion = useCallback((event: DeviceMotionEvent) => {
-    if (permissionState !== 'granted') {
-      console.log('Device motion event received but permissions not granted');
-      return;
-    }
+  const handleDeviceMotion = useCallback(
+    (event: DeviceMotionEvent) => {
+      if (permissionState !== "granted") {
+        console.log("Device motion event received but permissions not granted");
+        return;
+      }
 
-    const acceleration = event.acceleration;
-    if (!acceleration) {
-      console.log('No acceleration data in device motion event');
-      return;
-    }
+      const acceleration = event.acceleration;
+      if (!acceleration) {
+        console.log("No acceleration data in device motion event");
+        return;
+      }
 
-    // Get raw acceleration data
-    const accelX = Number(acceleration.x) || 0;
-    const accelY = Number(acceleration.y) || 0;
+      // Get raw acceleration data
+      const accelX = Number(acceleration.x) || 0;
+      const accelY = Number(acceleration.y) || 0;
 
-    console.log('Device motion event:', { accelX, accelY, permissionState });
+      console.log("Device motion event:", { accelX, accelY, permissionState });
 
-    // Always send packets for debugging, even if below deadzone
-    console.log('Sending device_motion packet:', { accelX, accelY });
-    sendPacket({
-      type: 'device_motion',
-      accel_x: accelX,
-      accel_y: accelY,
-      timestamp: Date.now()
-    });
-  }, [permissionState, sendPacket]);
+      // Always send packets for debugging, even if below deadzone
+      console.log("Sending device_motion packet:", { accelX, accelY });
+      sendPacket({
+        type: "device_motion",
+        accel_x: accelX,
+        accel_y: accelY,
+        sensitivity: pointerSensitivity,
+        timestamp: Date.now(),
+      });
+    },
+    [permissionState, sendPacket, pointerSensitivity],
+  );
 
   // User-initiated permission request
   const requestMotionPermissions = async () => {
-    setPermissionState('requesting');
+    setPermissionState("requesting");
     try {
-      if (typeof DeviceMotionEvent !== "undefined" &&
-          typeof (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<PermissionState> }).requestPermission === "function") {
-
-        const result = await (DeviceMotionEvent as unknown as { requestPermission?: () => Promise<PermissionState> }).requestPermission!();
+      if (
+        typeof DeviceMotionEvent !== "undefined" &&
+        typeof (
+          DeviceMotionEvent as unknown as {
+            requestPermission?: () => Promise<PermissionState>;
+          }
+        ).requestPermission === "function"
+      ) {
+        const result = await (
+          DeviceMotionEvent as unknown as {
+            requestPermission?: () => Promise<PermissionState>;
+          }
+        ).requestPermission!();
 
         if (result === "granted") {
-          setPermissionState('granted');
-          localStorage.setItem(PERMISSION_STORAGE_KEY, 'granted');
+          setPermissionState("granted");
+          localStorage.setItem(PERMISSION_STORAGE_KEY, "granted");
           window.addEventListener("devicemotion", handleDeviceMotion);
         } else {
-          setPermissionState('denied');
-          localStorage.setItem(PERMISSION_STORAGE_KEY, 'denied');
+          setPermissionState("denied");
+          localStorage.setItem(PERMISSION_STORAGE_KEY, "denied");
         }
       } else {
         // Fallback for browsers that don't require permission
-        setPermissionState('granted');
-        localStorage.setItem(PERMISSION_STORAGE_KEY, 'granted');
+        setPermissionState("granted");
+        localStorage.setItem(PERMISSION_STORAGE_KEY, "granted");
         window.addEventListener("devicemotion", handleDeviceMotion);
       }
     } catch (error) {
-      console.error('Failed to get sensor permissions:', error);
-      setPermissionState('denied');
-      localStorage.setItem(PERMISSION_STORAGE_KEY, 'denied');
+      console.error("Failed to get sensor permissions:", error);
+      setPermissionState("denied");
+      localStorage.setItem(PERMISSION_STORAGE_KEY, "denied");
     }
   };
 
   // WebSocket connection management
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const key = urlParams.get('key');
+    const key = urlParams.get("key");
     if (key) {
       setAuthKey(key);
       connectWebSocket(key);
     } else {
-      setConnectionStatus('error');
+      setConnectionStatus("error");
     }
 
     return () => {
@@ -227,8 +264,8 @@ export default function App() {
   useEffect(() => {
     const healthCheck = setInterval(() => {
       const timeSinceLastMessage = Date.now() - lastMessageTime;
-      if (timeSinceLastMessage > 30000 && connectionStatus === 'connected') {
-        console.warn('Connection appears stale, attempting reconnection...');
+      if (timeSinceLastMessage > 30000 && connectionStatus === "connected") {
+        console.warn("Connection appears stale, attempting reconnection...");
         if (authKey && isMountedRef.current) {
           connectWebSocket(authKey);
         }
@@ -241,23 +278,23 @@ export default function App() {
   // Check sensor permissions on mount
   useEffect(() => {
     const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
-    if (stored === 'granted') {
-      setPermissionState('granted');
+    if (stored === "granted") {
+      setPermissionState("granted");
       // Start listening immediately if previously granted
       if (typeof DeviceMotionEvent !== "undefined") {
         window.addEventListener("devicemotion", handleDeviceMotion);
       }
-    } else if (stored === 'denied') {
-      setPermissionState('denied');
+    } else if (stored === "denied") {
+      setPermissionState("denied");
     } else {
       // First time user
-      setPermissionState('prompt');
+      setPermissionState("prompt");
     }
   }, [handleDeviceMotion]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (permissionState !== 'granted') return;
+    if (permissionState !== "granted") return;
 
     const touch = e.touches[0];
     lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
@@ -268,15 +305,17 @@ export default function App() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (!lastTouchRef.current || permissionState !== 'granted') return;
+    if (!lastTouchRef.current || permissionState !== "granted") return;
 
     const touch = e.touches[0];
-    const deltaX = (touch.clientX - lastTouchRef.current.x) * sensitivity;
-    const deltaY = (touch.clientY - lastTouchRef.current.y) * sensitivity;
+    const deltaX =
+      (touch.clientX - lastTouchRef.current.x) * pointerSensitivity;
+    const deltaY =
+      (touch.clientY - lastTouchRef.current.y) * pointerSensitivity;
 
     // Validate touch data
     if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
-      console.error('Invalid touch delta values');
+      console.error("Invalid touch delta values");
       return;
     }
 
@@ -295,11 +334,15 @@ export default function App() {
     }
 
     // Only send scroll packets for meaningful movements
-    if (Math.abs(deltaX) > SCROLL_THRESHOLD || Math.abs(deltaY) > SCROLL_THRESHOLD) {
+    if (
+      Math.abs(deltaX) > SCROLL_THRESHOLD ||
+      Math.abs(deltaY) > SCROLL_THRESHOLD
+    ) {
       sendPacket({
-        type: 'scroll_move',
+        type: "scroll_move",
         x: Math.round(deltaX),
-        y: Math.round(deltaY)
+        y: Math.round(deltaY),
+        sensitivity: scrollSensitivity,
       });
     }
 
@@ -320,34 +363,36 @@ export default function App() {
   };
 
   const handleLeftTouchStart = () => {
-    if (permissionState !== 'granted') return;
+    if (permissionState !== "granted") return;
     setIsLeftPressed(true);
-    sendPacket({ type: 'left_click_down' });
+    sendPacket({ type: "left_click_down" });
   };
 
   const handleLeftTouchEnd = () => {
-    if (permissionState !== 'granted') return;
+    if (permissionState !== "granted") return;
     setIsLeftPressed(false);
-    sendPacket({ type: 'left_click_up' });
+    sendPacket({ type: "left_click_up" });
   };
 
   const handleRightTouchStart = () => {
-    if (permissionState !== 'granted') return;
+    if (permissionState !== "granted") return;
     setIsRightPressed(true);
-    sendPacket({ type: 'right_click_down' });
+    sendPacket({ type: "right_click_down" });
   };
 
   const handleRightTouchEnd = () => {
-    if (permissionState !== 'granted') return;
+    if (permissionState !== "granted") return;
     setIsRightPressed(false);
-    sendPacket({ type: 'right_click_up' });
+    sendPacket({ type: "right_click_up" });
   };
 
   return (
     <div>
       <Header
-        sensitivity={sensitivity}
-        onSensitivityChange={setSensitivity}
+        pointerSensitivity={pointerSensitivity}
+        onPointerSensitivityChange={setPointerSensitivity}
+        scrollSensitivity={scrollSensitivity}
+        onScrollSensitivityChange={setScrollSensitivity}
         showSensorLog={showSensorLog}
         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
         buttonsAboveTouchpad={buttonsAboveTouchpad}
@@ -356,6 +401,8 @@ export default function App() {
         }
         isTable={isTable}
         onToggleIsTable={() => setIsTable(!isTable)}
+        naturalScroll={naturalScroll}
+        onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
         connectionStatus={connectionStatus}
       />
 
@@ -390,17 +437,17 @@ export default function App() {
             gap: 16,
           }}
         >
-           <Touchpad
-             touchpadRef={touchpadRef}
-             touchActive={touchActive}
-             cursorPosition={cursorPosition}
-             isLeftPressed={isLeftPressed}
-             isRightPressed={isRightPressed}
-             onTouchStart={handleTouchStart}
-             onTouchMove={handleTouchMove}
-             onTouchEnd={handleTouchEnd}
-             permissionState={permissionState}
-           />
+          <Touchpad
+            touchpadRef={touchpadRef}
+            touchActive={touchActive}
+            cursorPosition={cursorPosition}
+            isLeftPressed={isLeftPressed}
+            isRightPressed={isRightPressed}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            permissionState={permissionState}
+          />
         </div>
 
         {!buttonsAboveTouchpad && (
@@ -423,50 +470,54 @@ export default function App() {
       </main>
 
       {/* Permission UI Overlays */}
-      {permissionState === 'checking' && (
-        <Box sx={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center',
-          zIndex: 1000
-        }}>
+      {permissionState === "checking" && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            textAlign: "center",
+            zIndex: 1000,
+          }}
+        >
           <CircularProgress />
         </Box>
       )}
 
-      {(permissionState === 'prompt' || permissionState === 'requesting') && (
+      {(permissionState === "prompt" || permissionState === "requesting") && (
         <PermissionPrompt
           onRequestPermissions={requestMotionPermissions}
-          isRequesting={permissionState === 'requesting'}
+          isRequesting={permissionState === "requesting"}
         />
       )}
 
-      {permissionState === 'denied' && (
-        <Box sx={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center',
-          p: 4,
-          bgcolor: 'background.paper',
-          borderRadius: 3,
-          boxShadow: 3,
-          zIndex: 1000,
-          minWidth: 350
-        }}>
+      {permissionState === "denied" && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            textAlign: "center",
+            p: 4,
+            bgcolor: "background.paper",
+            borderRadius: 3,
+            boxShadow: 3,
+            zIndex: 1000,
+            minWidth: 350,
+          }}
+        >
           <Typography variant="h5" color="error.main" sx={{ mb: 2 }}>
             Motion Permissions Required
           </Typography>
-          <Typography sx={{ mb: 3, color: 'text.secondary' }}>
+          <Typography sx={{ mb: 3, color: "text.secondary" }}>
             Device motion permissions are needed to control the mouse cursor.
             Please enable them in your browser settings or try again.
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => setPermissionState('prompt')}
+            onClick={() => setPermissionState("prompt")}
             sx={{ mr: 2 }}
           >
             Try Again
@@ -475,7 +526,7 @@ export default function App() {
             variant="text"
             onClick={() => {
               localStorage.removeItem(PERMISSION_STORAGE_KEY);
-              setPermissionState('prompt');
+              setPermissionState("prompt");
             }}
           >
             Reset Settings

@@ -12,27 +12,37 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import SettingsModal from "./SettingsModal";
 
-export function Header({
-  sensitivity,
-  onSensitivityChange,
-  showSensorLog,
-  onToggleSensorLog,
-  buttonsAboveTouchpad,
-  onToggleButtonPosition,
-  isTable,
-  onToggleIsTable,
-  connectionStatus,
-}: {
-  sensitivity: number;
-  onSensitivityChange: (value: number) => void;
+interface HeaderProps {
+  pointerSensitivity: number;
+  scrollSensitivity: number;
+  onPointerSensitivityChange: (value: number) => void;
+  onScrollSensitivityChange: (value: number) => void;
   showSensorLog: boolean;
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
   isTable: boolean;
   onToggleIsTable: () => void;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
-}) {
+  naturalScroll: boolean;
+  onToggleNaturalScroll: () => void;
+  connectionStatus: "connecting" | "connected" | "disconnected" | "error";
+}
+
+export function Header({
+  pointerSensitivity,
+  scrollSensitivity,
+  onPointerSensitivityChange,
+  onScrollSensitivityChange,
+  showSensorLog,
+  onToggleSensorLog,
+  buttonsAboveTouchpad,
+  onToggleButtonPosition,
+  isTable,
+  onToggleIsTable,
+  naturalScroll,
+  onToggleNaturalScroll,
+  connectionStatus,
+}: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSettingsOpen = () => {
@@ -55,18 +65,18 @@ export function Header({
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Quick Mouse
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-          {connectionStatus === 'connecting' && (
+        <Box sx={{ display: "flex", alignItems: "center", mr: 1 }}>
+          {connectionStatus === "connecting" && (
             <CircularProgress size={20} color="inherit" />
           )}
-          {connectionStatus === 'connected' && (
-            <WifiIcon sx={{ color: 'success.main' }} />
+          {connectionStatus === "connected" && (
+            <WifiIcon sx={{ color: "success.main" }} />
           )}
-          {connectionStatus === 'disconnected' && (
-            <WifiOffIcon sx={{ color: 'warning.main' }} />
+          {connectionStatus === "disconnected" && (
+            <WifiOffIcon sx={{ color: "warning.main" }} />
           )}
-          {connectionStatus === 'error' && (
-            <ErrorIcon sx={{ color: 'error.main' }} />
+          {connectionStatus === "error" && (
+            <ErrorIcon sx={{ color: "error.main" }} />
           )}
         </Box>
         <IconButton
@@ -80,14 +90,18 @@ export function Header({
         <SettingsModal
           open={settingsOpen}
           onClose={handleSettingsClose}
-          sensitivity={sensitivity}
-          onSensitivityChange={onSensitivityChange}
+          pointerSensitivity={pointerSensitivity}
+          scrollSensitivity={scrollSensitivity}
+          onPointerSensitivityChange={onPointerSensitivityChange}
+          onScrollSensitivityChange={onScrollSensitivityChange}
           showSensorLog={showSensorLog}
           onToggleSensorLog={onToggleSensorLog}
           buttonsAboveTouchpad={buttonsAboveTouchpad}
           onToggleButtonPosition={onToggleButtonPosition}
           isTable={isTable}
           onToggleIsTable={onToggleIsTable}
+          naturalScroll={naturalScroll}
+          onToggleNaturalScroll={onToggleNaturalScroll}
         />
       </Toolbar>
     </AppBar>

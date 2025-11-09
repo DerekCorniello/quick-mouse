@@ -3,11 +3,13 @@ import Typography from "@mui/material/Typography";
 import Slider from "@mui/material/Slider";
 
 interface SensitivityControlProps {
+  title?: string;
   sensitivity: number;
   onSensitivityChange: (value: number) => void;
 }
 
 export function SensitivityControl({
+  title = "Sensitivity",
   sensitivity,
   onSensitivityChange,
 }: SensitivityControlProps) {
@@ -30,7 +32,7 @@ export function SensitivityControl({
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Sensitivity
+          {title}
         </Typography>
         <Typography variant="body2" color="primary">
           {sensitivity}x

@@ -5,29 +5,39 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import { SensitivityControl } from "./SensitivityControl";
 
-export default function SettingsModal({
-  open,
-  onClose,
-  sensitivity,
-  onSensitivityChange,
-  showSensorLog,
-  onToggleSensorLog,
-  buttonsAboveTouchpad,
-  onToggleButtonPosition,
-  isTable,
-  onToggleIsTable,
-}: {
+interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
-  sensitivity: number;
-  onSensitivityChange: (value: number) => void;
+  pointerSensitivity: number;
+  scrollSensitivity: number;
+  onPointerSensitivityChange: (value: number) => void;
+  onScrollSensitivityChange: (value: number) => void;
   showSensorLog: boolean;
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
   onToggleButtonPosition: () => void;
   isTable: boolean;
   onToggleIsTable: () => void;
-}) {
+  naturalScroll: boolean;
+  onToggleNaturalScroll: () => void;
+}
+
+export default function SettingsModal({
+  open,
+  onClose,
+  pointerSensitivity,
+  scrollSensitivity,
+  onPointerSensitivityChange,
+  onScrollSensitivityChange,
+  showSensorLog,
+  onToggleSensorLog,
+  buttonsAboveTouchpad,
+  onToggleButtonPosition,
+  isTable,
+  onToggleIsTable,
+  naturalScroll,
+  onToggleNaturalScroll,
+}: SettingsModalProps) {
   return (
     <>
       <Dialog
@@ -36,20 +46,20 @@ export default function SettingsModal({
         maxWidth="sm"
         fullWidth
         sx={{
-          '& .MuiDialog-paper': {
-            background: 'linear-gradient(180deg, #0f1720 0%, #111827 100%)',
+          "& .MuiDialog-paper": {
+            background: "linear-gradient(180deg, #0f1720 0%, #111827 100%)",
             border: 1,
-            borderColor: 'divider',
+            borderColor: "divider",
             borderRadius: 3,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
           },
         }}
       >
         <DialogTitle
           sx={{
-            color: 'text.primary',
+            color: "text.primary",
             borderBottom: 1,
-            borderColor: 'divider',
+            borderColor: "divider",
             pb: 2,
           }}
         >
@@ -57,8 +67,14 @@ export default function SettingsModal({
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           <SensitivityControl
-            sensitivity={sensitivity}
-            onSensitivityChange={onSensitivityChange}
+            title="Pointer Sensitivity"
+            sensitivity={pointerSensitivity}
+            onSensitivityChange={onPointerSensitivityChange}
+          />
+          <SensitivityControl
+            title="Scroll Sensitivity"
+            sensitivity={scrollSensitivity}
+            onSensitivityChange={onScrollSensitivityChange}
           />
           <FormControlLabel
             control={
@@ -91,6 +107,17 @@ export default function SettingsModal({
               />
             }
             label="Table Mode"
+            sx={{ mt: 1 }}
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={naturalScroll}
+                onChange={onToggleNaturalScroll}
+                color="primary"
+              />
+            }
+            label="Natural Scroll"
             sx={{ mt: 1 }}
           />
         </DialogContent>
