@@ -138,7 +138,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 		if math.Abs(rotAlpha) > c.rotDeadzone {
 			c.velocityY -= rotAlpha * 0.05 // Reduced sensitivity for handheld mode
 		}
-		if math.Abs(rotBeta) > c.rotDeadzone {
+		if math.Abs(rotGamma) > c.rotDeadzone {
 			c.velocityX -= rotGamma * 0.05 // Reduced sensitivity for handheld mode
 		}
 		log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
