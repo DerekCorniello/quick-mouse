@@ -1,7 +1,19 @@
 /* Minimal base CSS — MUI provides component styles and resets via CssBaseline */
 
-html { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-body { margin: 0; }
+html {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+}
+body {
+  margin: 0;
+}
 
 /* Keep some app CSS variables for compatibility */
 :root {
@@ -10,24 +22,53 @@ body { margin: 0; }
 }
 
 /* Utility helper used by some components */
-  .pointer-events-none { pointer-events: none; }
+.pointer-events-none {
+  pointer-events: none;
+}
 
+/* Reduced utility set — only classes used by components */
 
-  /* Reduced utility set — only classes used by components */
-
-  .bg-green-500 { background-color: #22c55e; }
-  .bg-purple-500 { background-color: #7c3aed; }
-  .bg-slate-700 { background-color: #374151; }
-  .text-sm { font-size: 0.875rem; }
-  .text-center { text-align: center; }
-  .text-slate-300 { color: #94a3b8; }
-  .text-slate-400 { color: #94a3b8; }
-  .text-white { color: #ffffff; }
-  .pointer-events-none { pointer-events: none; }
-  .p-4 { padding: 16px; }
-  .pb-8 { padding-bottom: 64px; }
-  .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.06); }
-  .opacity-10 { opacity: 0.1; }
+.bg-green-500 {
+  background-color: #22c55e;
+}
+.bg-purple-500 {
+  background-color: #7c3aed;
+}
+.bg-slate-700 {
+  background-color: #374151;
+}
+.text-sm {
+  font-size: 0.875rem;
+}
+.text-center {
+  text-align: center;
+}
+.text-slate-300 {
+  color: #94a3b8;
+}
+.text-slate-400 {
+  color: #94a3b8;
+}
+.text-white {
+  color: #ffffff;
+}
+.pointer-events-none {
+  pointer-events: none;
+}
+.p-4 {
+  padding: 16px;
+}
+.pb-8 {
+  padding-bottom: 64px;
+}
+.shadow-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.06);
+}
+.opacity-10 {
+  opacity: 0.1;
+}
 
 /* Keep only minimal legacy variables; primary theming lives in MUI theme */
 :root {
@@ -100,7 +141,7 @@ html {
 
 @property --tw-gradient-position {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-gradient-from {
@@ -123,12 +164,12 @@ html {
 
 @property --tw-gradient-stops {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-gradient-via-stops {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-gradient-from-position {
@@ -157,7 +198,7 @@ html {
 
 @property --tw-shadow-color {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-shadow-alpha {
@@ -174,7 +215,7 @@ html {
 
 @property --tw-inset-shadow-color {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-inset-shadow-alpha {
@@ -185,7 +226,7 @@ html {
 
 @property --tw-ring-color {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-ring-shadow {
@@ -196,7 +237,7 @@ html {
 
 @property --tw-inset-ring-color {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-inset-ring-shadow {
@@ -207,7 +248,7 @@ html {
 
 @property --tw-ring-inset {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-ring-offset-width {
@@ -230,7 +271,7 @@ html {
 
 @property --tw-duration {
   syntax: "*";
-  inherits: false
+  inherits: false;
 }
 
 @property --tw-scale-x {
@@ -253,6 +294,6 @@ html {
 
 @keyframes pulse {
   50% {
-    opacity: .5;
+    opacity: 0.5;
   }
 }

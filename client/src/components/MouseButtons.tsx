@@ -10,6 +10,7 @@ interface MouseButtonsProps {
   onLeftTouchEnd: () => void;
   onRightTouchStart: () => void;
   onRightTouchEnd: () => void;
+  swapLeftRightClick: boolean;
 }
 
 export function MouseButtons({
@@ -18,25 +19,59 @@ export function MouseButtons({
   onLeftTouchStart,
   onLeftTouchEnd,
   onRightTouchStart,
-  onRightTouchEnd
+  onRightTouchEnd,
+  swapLeftRightClick,
 }: MouseButtonsProps) {
   return (
-    <Paper square elevation={0} sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'transparent' }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, maxWidth: 600, mx: 'auto' }}>
+    <Paper
+      square
+      elevation={0}
+      sx={{
+        p: 0.5,
+        borderBottom: 1,
+        borderColor: "divider",
+        bgcolor: "transparent",
+      }}
+    >
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 1,
+          maxWidth: 600,
+          mx: "auto",
+        }}
+      >
         <Box>
           <Button
             onTouchStart={onLeftTouchStart}
             onTouchEnd={onLeftTouchEnd}
             onTouchCancel={onLeftTouchEnd}
-            variant={isLeftPressed ? 'contained' : 'outlined'}
-            color={isLeftPressed ? 'success' : 'inherit'}
+            variant={isLeftPressed ? "contained" : "outlined"}
+            color={isLeftPressed ? "success" : "inherit"}
             fullWidth
-            sx={{ height: 160, borderRadius: 4, touchAction: 'none' }}
+            sx={(theme) => ({
+              border: 1,
+              height: 160,
+              borderRadius: 4,
+              touchAction: "none",
+              borderColor: theme.palette.primary.main,
+            })}
           >
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.primary' }}>
-                <MouseIcon sx={{ fontSize: 40 }} />
-                <Box component="span">Left Click</Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1,
+                color: "text.primary",
+              }}
+            >
+              <MouseIcon sx={{ fontSize: 40 }} />
+              <Box component="span">
+                {swapLeftRightClick ? "Right Click" : "Left Click"}
               </Box>
+            </Box>
           </Button>
         </Box>
 
@@ -45,15 +80,31 @@ export function MouseButtons({
             onTouchStart={onRightTouchStart}
             onTouchEnd={onRightTouchEnd}
             onTouchCancel={onRightTouchEnd}
-            variant={isRightPressed ? 'contained' : 'outlined'}
-            color={isRightPressed ? 'secondary' : 'inherit'}
+            variant={isRightPressed ? "contained" : "outlined"}
+            color={isRightPressed ? "secondary" : "inherit"}
             fullWidth
-            sx={{ height: 160, borderRadius: 4, touchAction: 'none' }}
+            sx={(theme) => ({
+              border: 1,
+              height: 160,
+              borderRadius: 4,
+              touchAction: "none",
+              borderColor: theme.palette.primary.main,
+            })}
           >
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.primary' }}>
-                <MouseIcon sx={{ fontSize: 40 }} />
-                <Box component="span">Right Click</Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1,
+                color: "text.primary",
+              }}
+            >
+              <MouseIcon sx={{ fontSize: 40 }} />
+              <Box component="span">
+                {swapLeftRightClick ? "Left Click" : "Right Click"}
               </Box>
+            </Box>
           </Button>
         </Box>
       </Box>
