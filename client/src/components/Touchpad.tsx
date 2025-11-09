@@ -36,13 +36,10 @@ export function Touchpad({
         position: "relative",
         flex: 1,
         minHeight: 200,
-        maxHeight: 400,
+        maxHeight: "calc(100vh - 350px)",
         borderRadius: 3,
         border: 2,
-        borderColor: touchActive
-          ? (theme.palette.app?.cursor?.default?.border ??
-            theme.palette.primary.main)
-          : theme.palette.divider,
+        borderColor: theme.palette.primary.main,
         overflow: "hidden",
         bgcolor: "transparent",
         touchAction: "none",
@@ -95,7 +92,7 @@ export function Touchpad({
         <TouchAppIcon sx={{ fontSize: 64, color: "text.secondary", mb: 1 }} />
         <Box component="p" sx={{ color: "text.secondary" }}>
           {permissionState === "granted"
-            ? "Slide to scroll"
+            ? "Swipe to scroll"
             : "Waiting for permissions..."}
         </Box>
       </Box>

@@ -25,6 +25,7 @@ interface HeaderProps {
   onToggleIsTable: () => void;
   naturalScroll: boolean;
   onToggleNaturalScroll: () => void;
+  onToggleSwapLeftRightClick: () => void;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
 }
 
@@ -41,6 +42,7 @@ export function Header({
   onToggleIsTable,
   naturalScroll,
   onToggleNaturalScroll,
+  onToggleSwapLeftRightClick,
   connectionStatus,
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -102,6 +104,7 @@ export function Header({
           onToggleIsTable={onToggleIsTable}
           naturalScroll={naturalScroll}
           onToggleNaturalScroll={onToggleNaturalScroll}
+           onToggleSwapLeftRightClick={onToggleSwapLeftRightClick}
         />
       </Toolbar>
     </AppBar>

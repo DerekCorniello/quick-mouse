@@ -14,12 +14,13 @@ export default function App() {
   const [isLeftPressed, setIsLeftPressed] = useState(false);
   const [isRightPressed, setIsRightPressed] = useState(false);
   const [touchActive, setTouchActive] = useState(false);
-  const [pointerSensitivity, setPointerSensitivity] = useState(2);
-  const [scrollSensitivity, setScrollSensitivity] = useState(2);
+  const [pointerSensitivity, setPointerSensitivity] = useState(5);
+  const [scrollSensitivity, setScrollSensitivity] = useState(5);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
   const [isTable, setIsTable] = useState(true);
   const [naturalScroll, setNaturalScroll] = useState(false);
+  const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
@@ -425,25 +426,33 @@ export default function App() {
   const handleLeftTouchStart = () => {
     if (permissionState !== "granted") return;
     setIsLeftPressed(true);
-    sendPacket({ type: "left_click_down" });
+    sendPacket({
+      type: swapLeftRightClick ? "right_click_down" : "left_click_down",
+    });
   };
 
   const handleLeftTouchEnd = () => {
     if (permissionState !== "granted") return;
     setIsLeftPressed(false);
-    sendPacket({ type: "left_click_up" });
+    sendPacket({
+      type: swapLeftRightClick ? "right_click_up" : "left_click_up",
+    });
   };
 
   const handleRightTouchStart = () => {
     if (permissionState !== "granted") return;
     setIsRightPressed(true);
-    sendPacket({ type: "right_click_down" });
+    sendPacket({
+      type: swapLeftRightClick ? "left_click_down" : "right_click_down",
+    });
   };
 
   const handleRightTouchEnd = () => {
     if (permissionState !== "granted") return;
     setIsRightPressed(false);
-    sendPacket({ type: "right_click_up" });
+    sendPacket({
+      type: swapLeftRightClick ? "left_click_up" : "right_click_up",
+    });
   };
 
   return (
@@ -466,6 +475,9 @@ export default function App() {
         }}
         naturalScroll={naturalScroll}
         onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
+        onToggleSwapLeftRightClick={() =>
+          setSwapLeftRightClick(!swapLeftRightClick)
+        }
         connectionStatus={connectionStatus}
       />
 
@@ -474,7 +486,7 @@ export default function App() {
           display: "flex",
           flexDirection: "column",
           minHeight: "100vh",
-          gap: 16,
+          gap: 4,
           position: "relative",
         }}
       >
@@ -487,6 +499,7 @@ export default function App() {
               onLeftTouchEnd={handleLeftTouchEnd}
               onRightTouchStart={handleRightTouchStart}
               onRightTouchEnd={handleRightTouchEnd}
+              swapLeftRightClick={swapLeftRightClick}
             />
           </div>
         )}
@@ -496,7 +509,7 @@ export default function App() {
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            padding: 16,
+            padding: 4,
             gap: 16,
           }}
         >
@@ -511,18 +524,18 @@ export default function App() {
             onTouchEnd={handleTouchEnd}
             permissionState={permissionState}
           />
+          {!buttonsAboveTouchpad && (
+            <MouseButtons
+              isLeftPressed={isLeftPressed}
+              isRightPressed={isRightPressed}
+              onLeftTouchStart={handleLeftTouchStart}
+              onLeftTouchEnd={handleLeftTouchEnd}
+              onRightTouchStart={handleRightTouchStart}
+              onRightTouchEnd={handleRightTouchEnd}
+              swapLeftRightClick={swapLeftRightClick}
+            />
+          )}
         </div>
-
-        {!buttonsAboveTouchpad && (
-          <MouseButtons
-            isLeftPressed={isLeftPressed}
-            isRightPressed={isRightPressed}
-            onLeftTouchStart={handleLeftTouchStart}
-            onLeftTouchEnd={handleLeftTouchEnd}
-            onRightTouchStart={handleRightTouchStart}
-            onRightTouchEnd={handleRightTouchEnd}
-          />
-        )}
 
         {showSensorLog && (
           <SensorLog

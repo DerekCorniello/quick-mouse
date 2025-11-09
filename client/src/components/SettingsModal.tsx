@@ -1,8 +1,7 @@
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Switch from "@mui/material/Switch";
+import Button from "@mui/material/Button";
 import { SensitivityControl } from "./SensitivityControl";
 
 interface SettingsModalProps {
@@ -20,6 +19,7 @@ interface SettingsModalProps {
   onToggleIsTable: () => void;
   naturalScroll: boolean;
   onToggleNaturalScroll: () => void;
+  onToggleSwapLeftRightClick: () => void;
 }
 
 export default function SettingsModal({
@@ -37,6 +37,7 @@ export default function SettingsModal({
   onToggleIsTable,
   naturalScroll,
   onToggleNaturalScroll,
+  onToggleSwapLeftRightClick,
 }: SettingsModalProps) {
   return (
     <>
@@ -76,50 +77,41 @@ export default function SettingsModal({
             sensitivity={scrollSensitivity}
             onSensitivityChange={onScrollSensitivityChange}
           />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={showSensorLog}
-                onChange={onToggleSensorLog}
-                color="primary"
-              />
-            }
-            label="Show Sensor Log"
+          <Button
+            variant="outlined"
+            onClick={onToggleSensorLog}
             sx={{ mt: 2 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={buttonsAboveTouchpad}
-                onChange={onToggleButtonPosition}
-                color="primary"
-              />
-            }
-            label="Buttons Above Touchpad"
+          >
+            {showSensorLog ? "Hide Sensor Log" : "Show Sensor Log"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onToggleButtonPosition}
             sx={{ mt: 1 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isTable}
-                onChange={onToggleIsTable}
-                color="primary"
-              />
-            }
-            label="Table Mode"
+          >
+            {buttonsAboveTouchpad ? "Move Buttons Below Touchpad" : "Move Buttons Above Touchpad"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onToggleIsTable}
             sx={{ mt: 1 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={naturalScroll}
-                onChange={onToggleNaturalScroll}
-                color="primary"
-              />
-            }
-            label="Natural Scroll"
+          >
+            {isTable ? "Switch to Handheld Mode" : "Switch to Table Mode"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onToggleNaturalScroll}
             sx={{ mt: 1 }}
-          />
+          >
+            {naturalScroll ? "Switch to Reverse Scroll" : "Switch to Natural Scroll"}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onToggleSwapLeftRightClick}
+            sx={{ mt: 1 }}
+          >
+            Swap Left/Right Click
+          </Button>
         </DialogContent>
       </Dialog>
     </>

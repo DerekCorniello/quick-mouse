@@ -10,6 +10,7 @@ interface MouseButtonsProps {
   onLeftTouchEnd: () => void;
   onRightTouchStart: () => void;
   onRightTouchEnd: () => void;
+  swapLeftRightClick: boolean;
 }
 
 export function MouseButtons({
@@ -19,13 +20,14 @@ export function MouseButtons({
   onLeftTouchEnd,
   onRightTouchStart,
   onRightTouchEnd,
+  swapLeftRightClick,
 }: MouseButtonsProps) {
   return (
     <Paper
       square
       elevation={0}
       sx={{
-        p: 2,
+        p: 0.5,
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: "transparent",
@@ -35,7 +37,7 @@ export function MouseButtons({
         sx={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: 2,
+          gap: 1,
           maxWidth: 600,
           mx: "auto",
         }}
@@ -48,7 +50,13 @@ export function MouseButtons({
             variant={isLeftPressed ? "contained" : "outlined"}
             color={isLeftPressed ? "success" : "inherit"}
             fullWidth
-            sx={{ height: 160, borderRadius: 4, touchAction: "none" }}
+            sx={(theme) => ({
+              border: 1,
+              height: 160,
+              borderRadius: 4,
+              touchAction: "none",
+              borderColor: theme.palette.primary.main,
+            })}
           >
             <Box
               sx={{
@@ -60,7 +68,9 @@ export function MouseButtons({
               }}
             >
               <MouseIcon sx={{ fontSize: 40 }} />
-              <Box component="span">Left Click</Box>
+              <Box component="span">
+                {swapLeftRightClick ? "Right Click" : "Left Click"}
+              </Box>
             </Box>
           </Button>
         </Box>
@@ -73,7 +83,13 @@ export function MouseButtons({
             variant={isRightPressed ? "contained" : "outlined"}
             color={isRightPressed ? "secondary" : "inherit"}
             fullWidth
-            sx={{ height: 160, borderRadius: 4, touchAction: "none" }}
+            sx={(theme) => ({
+              border: 1,
+              height: 160,
+              borderRadius: 4,
+              touchAction: "none",
+              borderColor: theme.palette.primary.main,
+            })}
           >
             <Box
               sx={{
@@ -85,7 +101,9 @@ export function MouseButtons({
               }}
             >
               <MouseIcon sx={{ fontSize: 40 }} />
-              <Box component="span">Right Click</Box>
+              <Box component="span">
+                {swapLeftRightClick ? "Left Click" : "Right Click"}
+              </Box>
             </Box>
           </Button>
         </Box>

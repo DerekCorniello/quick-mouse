@@ -40,8 +40,8 @@ export function SensitivityControl({
       </Box>
       <Slider
         value={sensitivity}
-        min={1}
-        max={5}
+        min={0}
+        max={10}
         step={0.1}
         onChange={(_, value) =>
           onSensitivityChange(Array.isArray(value) ? value[0] : value)
