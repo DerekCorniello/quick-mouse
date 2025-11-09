@@ -1,7 +1,8 @@
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
 import { SensitivityControl } from "./SensitivityControl";
 
 interface SettingsModalProps {
@@ -37,84 +38,72 @@ export default function SettingsModal({
   onToggleSwapLeftRightClick,
   onRecalibrate,
 }: SettingsModalProps) {
+  if (!open) return null;
   return (
-    <>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth="sm"
-        fullWidth
-        sx={{
-          "& .MuiDialog-paper": {
-            bgcolor: "background.paper",
-            border: 1,
-            borderColor: "divider",
-            borderRadius: 3,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-          },
-        }}
+    <Box
+      sx={(theme) => ({
+        border: 1,
+        borderColor: theme.palette.primary.main,
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        textAlign: "center",
+        p: 4,
+        bgcolor: "background.paper",
+        borderRadius: 3,
+        boxShadow: 3,
+        zIndex: 1000,
+        minWidth: 300,
+      })}
+    >
+      <IconButton
+        onClick={onClose}
+        sx={{ position: "absolute", top: 8, right: 8 }}
       >
-        <DialogTitle
-          sx={{
-            color: "text.primary",
-            borderBottom: 1,
-            borderColor: "divider",
-            pb: 2,
+        <CloseIcon />
+      </IconButton>
+      <Typography variant="h5" sx={{ mb: 3 }}>
+        Settings
+      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <SensitivityControl
+          title="Pointer Sensitivity"
+          sensitivity={pointerSensitivity}
+          onSensitivityChange={onPointerSensitivityChange}
+        />
+        <SensitivityControl
+          title="Scroll Sensitivity"
+          sensitivity={scrollSensitivity}
+          onSensitivityChange={onScrollSensitivityChange}
+        />
+        <Button variant="outlined" onClick={onToggleSensorLog} fullWidth>
+          {showSensorLog ? "Hide Sensor Log" : "Show Sensor Log"}
+        </Button>
+        <Button variant="outlined" onClick={onToggleButtonPosition} fullWidth>
+          {buttonsAboveTouchpad
+            ? "Move Buttons Below Touchpad"
+            : "Move Buttons Above Touchpad"}
+        </Button>
+        <Button variant="outlined" onClick={onToggleNaturalScroll} fullWidth>
+          {naturalScroll
+            ? "Switch to Reverse Scroll"
+            : "Switch to Natural Scroll"}
+        </Button>
+        <Button variant="outlined" onClick={onToggleSwapLeftRightClick} fullWidth>
+          Swap Left/Right Click
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            onRecalibrate();
+            onClose();
           }}
+          fullWidth
         >
-          Settings
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <SensitivityControl
-            title="Pointer Sensitivity"
-            sensitivity={pointerSensitivity}
-            onSensitivityChange={onPointerSensitivityChange}
-          />
-          <SensitivityControl
-            title="Scroll Sensitivity"
-            sensitivity={scrollSensitivity}
-            onSensitivityChange={onScrollSensitivityChange}
-          />
-          <Button variant="outlined" onClick={onToggleSensorLog} sx={{ mt: 2 }}>
-            {showSensorLog ? "Hide Sensor Log" : "Show Sensor Log"}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={onToggleButtonPosition}
-            sx={{ mt: 1 }}
-          >
-            {buttonsAboveTouchpad
-              ? "Move Buttons Below Touchpad"
-              : "Move Buttons Above Touchpad"}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={onToggleNaturalScroll}
-            sx={{ mt: 1 }}
-          >
-            {naturalScroll
-              ? "Switch to Reverse Scroll"
-              : "Switch to Natural Scroll"}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={onToggleSwapLeftRightClick}
-            sx={{ mt: 1 }}
-          >
-            Swap Left/Right Click
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              onRecalibrate();
-              onClose();
-            }}
-            sx={{ mt: 1 }}
-          >
-            Recalibrate Motion Sensors
-          </Button>
-        </DialogContent>
-      </Dialog>
-    </>
+          Recalibrate Motion Sensors
+        </Button>
+      </Box>
+    </Box>
   );
 }

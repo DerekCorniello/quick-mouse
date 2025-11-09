@@ -1,11 +1,7 @@
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import PauseIcon from "@mui/icons-material/Pause";
-import { useTheme } from "@mui/material/styles";
 
 interface PauseModalProps {
   open: boolean;
@@ -13,49 +9,36 @@ interface PauseModalProps {
 }
 
 export default function PauseModal({ open, onClose }: PauseModalProps) {
-  const theme = useTheme();
+  if (!open) return null;
   return (
-    <Dialog
-      open={open}
-      maxWidth="sm"
-      fullWidth
-      disableEscapeKeyDown={true}
-      BackdropProps={{ style: { pointerEvents: "none" } }}
-      sx={{
-        "& .MuiDialog-paper": {
-          background: theme.app.background.gradient,
-          border: 1,
-          borderColor: "divider",
-          borderRadius: 3,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-        },
-      }}
+    <Box
+      sx={(theme) => ({
+        border: 1,
+        borderColor: theme.palette.primary.main,
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        textAlign: "center",
+        p: 4,
+        bgcolor: "background.paper",
+        borderRadius: 3,
+        boxShadow: 3,
+        zIndex: 1000,
+        minWidth: 300,
+      })}
     >
-      <DialogTitle
-        sx={{
-          color: "text.primary",
-          borderBottom: 1,
-          borderColor: "divider",
-          pb: 2,
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mb: 2 }}>
         <PauseIcon />
-        Data Transmission Paused
-      </DialogTitle>
-      <DialogContent sx={{ p: 3 }}>
-        <Typography sx={{ color: "text.secondary" }}>
-          Mouse control data is currently paused. The connection remains active.
-          Click Resume to continue sending data.
-        </Typography>
-      </DialogContent>
-      <DialogActions sx={{ p: 3, pt: 0 }}>
-        <Button onClick={onClose} variant="contained" color="primary" fullWidth>
-          Resume
-        </Button>
-      </DialogActions>
-    </Dialog>
+        <Typography variant="h6">Data Transmission Paused</Typography>
+      </Box>
+      <Typography sx={{ mb: 3, color: "text.secondary" }}>
+        Mouse control data is currently paused. The connection remains active.
+        Click Resume to continue sending data.
+      </Typography>
+      <Button onClick={onClose} variant="contained" color="primary" fullWidth>
+        Resume
+      </Button>
+    </Box>
   );
 }
