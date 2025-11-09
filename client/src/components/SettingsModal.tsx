@@ -20,6 +20,7 @@ interface SettingsModalProps {
   naturalScroll: boolean;
   onToggleNaturalScroll: () => void;
   onToggleSwapLeftRightClick: () => void;
+  onRecalibrate: () => void;
 }
 
 export default function SettingsModal({
@@ -38,6 +39,7 @@ export default function SettingsModal({
   naturalScroll,
   onToggleNaturalScroll,
   onToggleSwapLeftRightClick,
+  onRecalibrate,
 }: SettingsModalProps) {
   return (
     <>
@@ -105,14 +107,21 @@ export default function SettingsModal({
           >
             {naturalScroll ? "Switch to Reverse Scroll" : "Switch to Natural Scroll"}
           </Button>
-          <Button
-            variant="outlined"
-            onClick={onToggleSwapLeftRightClick}
-            sx={{ mt: 1 }}
-          >
-            Swap Left/Right Click
-          </Button>
-        </DialogContent>
+           <Button
+             variant="outlined"
+             onClick={onToggleSwapLeftRightClick}
+             sx={{ mt: 1 }}
+           >
+             Swap Left/Right Click
+           </Button>
+           <Button
+             variant="outlined"
+             onClick={() => { onRecalibrate(); onClose(); }}
+             sx={{ mt: 1 }}
+           >
+             Recalibrate Motion Sensors
+           </Button>
+         </DialogContent>
       </Dialog>
     </>
   );

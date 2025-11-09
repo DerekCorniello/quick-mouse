@@ -1,23 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
-import LinearProgress from "@mui/material/LinearProgress";
 import SensorsIcon from "@mui/icons-material/Sensors";
 
 interface CalibrationDialogProps {
   onCalibrationComplete: () => void;
-  sampleCount: number;
+  onStartCalibration: () => void;
 }
 
 export function CalibrationDialog({
   onCalibrationComplete,
-  sampleCount,
+  onStartCalibration,
 }: CalibrationDialogProps) {
   const [step, setStep] = useState<"confirm" | "calibrating">("confirm");
 
   const handleStartCalibration = () => {
     setStep("calibrating");
+    onStartCalibration();
   };
 
   const handleSkip = () => {
@@ -46,7 +46,7 @@ export function CalibrationDialog({
           Calibrate Motion Sensors
         </Typography>
         <Typography sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}>
-          Calibration will zero your device's motion sensors for accurate control.
+          Calibration will zero your device&apos;s motion sensors for accurate control.
           Hold your device steady and avoid movement during calibration.
         </Typography>
         <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
@@ -91,17 +91,9 @@ export function CalibrationDialog({
       <Typography variant="h5" sx={{ mb: 2 }}>
         Calibrating...
       </Typography>
-      <Typography sx={{ mb: 3, color: "text.secondary" }}>
-        Hold your device steady or move gently - collecting samples. Samples collected: {sampleCount}
-      </Typography>
-      <LinearProgress
-        variant="determinate"
-        value={(sampleCount / 100) * 100}
-        sx={{ mb: 2, height: 8, borderRadius: 4 }}
-      />
-      <Typography variant="body2" color="text.secondary">
-        {Math.round((sampleCount / 100) * 100)}% complete
-      </Typography>
+       <Typography sx={{ mb: 3, color: "text.secondary" }}>
+         Hold your device steady or move gently - collecting samples.
+       </Typography>
     </Box>
   );
 }

@@ -5,10 +5,7 @@ import { Touchpad } from "./components/Touchpad";
 import { SensorLog } from "./components/SensorLog";
 import { PermissionPrompt } from "./components/PermissionPrompt";
 import { CalibrationDialog } from "./components/CalibrationDialog";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
+
 
 export default function App() {
   const [cursorPosition, setCursorPosition] = useState({ x: 50, y: 50 });
@@ -24,7 +21,9 @@ export default function App() {
   const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
-  const [calibrationSampleCount, setCalibrationSampleCount] = useState(0);
+   const calibrationCountRef = useRef(0);
+   const [calibrationStarted, setCalibrationStarted] = useState(false);
+   const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
 
   const handlePause = useCallback(() => {
@@ -39,9 +38,24 @@ export default function App() {
     setAppPhase("main");
   }, []);
 
+  const handleStartCalibration = useCallback(() => {
+    setCalibrationStarted(true);
+  }, []);
+
+  const handleRecalibrate = useCallback(() => {
+    setAppPhase("calibrating");
+    calibrationCountRef.current = 0;
+    setCalibrationStarted(false);
+    setCalibrationComplete(false);
+  }, []);
+
+
+
   const handlePermissionsGranted = useCallback(() => {
     setAppPhase("calibrating");
-    setCalibrationSampleCount(0);
+    calibrationCountRef.current = 0;
+    setCalibrationStarted(false);
+    setCalibrationComplete(false);
   }, []);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
@@ -246,27 +260,24 @@ export default function App() {
       const rotBeta = Number(movement?.beta) || 0;
       const rotGamma = Number(movement?.gamma) || 0;
 
-      if (appPhase === "calibrating") {
-        // Send calibration packet
-        sendPacket({
-          type: "calibration",
-          accel_x: accelX,
-          accel_y: accelY,
-          accel_z: accelZ,
-          rot_alpha: rotAlpha,
-          rot_beta: rotBeta,
-          rot_gamma: rotGamma,
-          timestamp: Date.now(),
-        });
-        setCalibrationSampleCount((prev) => {
-          const newCount = prev + 1;
-          if (newCount >= 100) {
+       if (appPhase === "calibrating" && calibrationStarted && !calibrationComplete) {
+         // Send calibration packet
+         sendPacket({
+           type: "calibration",
+           accel_x: accelX,
+           accel_y: accelY,
+           accel_z: accelZ,
+           rot_alpha: rotAlpha,
+           rot_beta: rotBeta,
+           rot_gamma: rotGamma,
+           timestamp: Date.now(),
+         });
+          calibrationCountRef.current += 1;
+          if (calibrationCountRef.current >= 100) {
             sendPacket({ type: "calibration_done" });
-            setAppPhase("main");
+            setCalibrationComplete(true);
           }
-          return newCount;
-        });
-      } else if (appPhase === "main") {
+        } else if (appPhase === "main") {
         // Send normal device_motion packet
         sendPacket({
           type: "device_motion",
@@ -280,7 +291,7 @@ export default function App() {
         });
       }
     },
-    [appPhase, sendPacket],
+    [appPhase, sendPacket, calibrationStarted, calibrationComplete],
   );
 
   // User-initiated permission request
@@ -350,15 +361,26 @@ export default function App() {
     return () => clearInterval(healthCheck);
   }, [lastMessageTime, connectionStatus, authKey, connectWebSocket]);
 
-  // Add device motion listener on mount
-  useEffect(() => {
-    if (typeof DeviceMotionEvent !== "undefined") {
-      window.addEventListener("devicemotion", handleDeviceMotion);
-    }
-    return () => {
-      window.removeEventListener("devicemotion", handleDeviceMotion);
-    };
-  }, [handleDeviceMotion]);
+   // Add device motion listener on mount
+   useEffect(() => {
+     if (typeof DeviceMotionEvent !== "undefined") {
+       window.addEventListener("devicemotion", handleDeviceMotion);
+     }
+     return () => {
+       window.removeEventListener("devicemotion", handleDeviceMotion);
+     };
+   }, [handleDeviceMotion]);
+
+   // Handle calibration completion delay
+   useEffect(() => {
+     if (calibrationComplete) {
+       const timer = setTimeout(() => {
+         setAppPhase("main");
+         setCalibrationComplete(false);
+       }, 1000);
+       return () => clearTimeout(timer);
+     }
+   }, [calibrationComplete]);
 
 
 
@@ -467,31 +489,32 @@ export default function App() {
 
   return (
     <div>
-      <Header
-        pointerSensitivity={pointerSensitivity}
-        onPointerSensitivityChange={setPointerSensitivity}
-        scrollSensitivity={scrollSensitivity}
-        onScrollSensitivityChange={setScrollSensitivity}
-        showSensorLog={showSensorLog}
-        onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
-        buttonsAboveTouchpad={buttonsAboveTouchpad}
-        onToggleButtonPosition={() =>
-          setButtonsAboveTouchpad(!buttonsAboveTouchpad)
-        }
-        isTable={isTable}
-        onToggleIsTable={() => {
-          setIsTable(!isTable);
-          sendPacket({ type: "switch_mode" });
-        }}
-        naturalScroll={naturalScroll}
-        onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
-        onToggleSwapLeftRightClick={() =>
-          setSwapLeftRightClick(!swapLeftRightClick)
-        }
-        connectionStatus={connectionStatus}
-        onPause={handlePause}
-        onResume={handleResume}
-      />
+       <Header
+         pointerSensitivity={pointerSensitivity}
+         onPointerSensitivityChange={setPointerSensitivity}
+         scrollSensitivity={scrollSensitivity}
+         onScrollSensitivityChange={setScrollSensitivity}
+         showSensorLog={showSensorLog}
+         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
+         buttonsAboveTouchpad={buttonsAboveTouchpad}
+         onToggleButtonPosition={() =>
+           setButtonsAboveTouchpad(!buttonsAboveTouchpad)
+         }
+         isTable={isTable}
+         onToggleIsTable={() => {
+           setIsTable(!isTable);
+           sendPacket({ type: "switch_mode" });
+         }}
+         naturalScroll={naturalScroll}
+         onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
+         onToggleSwapLeftRightClick={() =>
+           setSwapLeftRightClick(!swapLeftRightClick)
+         }
+         connectionStatus={connectionStatus}
+         onPause={handlePause}
+         onResume={handleResume}
+         onRecalibrate={handleRecalibrate}
+       />
 
       <main
         style={{
@@ -564,12 +587,12 @@ export default function App() {
         />
       )}
 
-      {appPhase === "calibrating" && (
-        <CalibrationDialog
-          onCalibrationComplete={handleCalibrationComplete}
-          sampleCount={calibrationSampleCount}
-        />
-      )}
+       {appPhase === "calibrating" && (
+         <CalibrationDialog
+           onCalibrationComplete={handleCalibrationComplete}
+           onStartCalibration={handleStartCalibration}
+         />
+       )}
 
 
     </div>
