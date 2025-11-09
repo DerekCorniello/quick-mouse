@@ -14,9 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"quick-mouse/server"
+
 	"github.com/gorilla/websocket"
 	"github.com/mdp/qrterminal/v3"
-	"quick-mouse/server"
 )
 
 // this is how we get the ip of the pc to host correctly
@@ -231,9 +232,11 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-var serializer server.Serializer = server.JSONSerializer{}
-var controller *server.PacketController
-var connectedClients int
+var (
+	serializer       server.Serializer = server.JSONSerializer{}
+	controller       *server.PacketController
+	connectedClients int
+)
 
 func enterAlternateScreen() {
 	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
@@ -376,7 +379,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		case activityChan <- struct{}{}:
 		default:
 		}
-		fmt.Printf("Received: %s\n", message)
+		// fmt.Printf("Received: %s\n", message)
 
 		// parse packet type from JSON
 		if err := json.Unmarshal(message, &envelope); err != nil {

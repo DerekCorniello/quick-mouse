@@ -16,6 +16,17 @@ export default function App() {
   const [touchActive, setTouchActive] = useState(false);
   const [pointerSensitivity, setPointerSensitivity] = useState(5);
   const [scrollSensitivity, setScrollSensitivity] = useState(5);
+  const pointerSensitivityRef = useRef(5);
+  const scrollSensitivityRef = useRef(5);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    pointerSensitivityRef.current = pointerSensitivity;
+  }, [pointerSensitivity]);
+
+  useEffect(() => {
+    scrollSensitivityRef.current = scrollSensitivity;
+  }, [scrollSensitivity]);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
   const [isTable, setIsTable] = useState(true);
@@ -32,7 +43,7 @@ export default function App() {
   const handleResume = useCallback(() => {
     isPausedRef.current = false;
   }, []);
-  const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+  const initialTouchesRef = useRef<{id: number, x: number, y: number}[]>([]);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
   // Sensor permission state
@@ -194,6 +205,16 @@ export default function App() {
             console.error("Invalid packet rot_gamma value:", packet.rot_gamma);
             return;
           }
+          if (
+            packet.sensitivity !== undefined &&
+            (typeof packet.sensitivity !== "number" ||
+              !Number.isFinite(packet.sensitivity) ||
+              isNaN(packet.sensitivity) ||
+              packet.sensitivity < 0)
+          ) {
+            console.error("Invalid packet sensitivity value:", packet.sensitivity);
+            return;
+          }
 
           const message = JSON.stringify(packet);
           ws.send(message);
@@ -259,16 +280,17 @@ export default function App() {
         rotBeta,
         rotGamma,
       });
-      sendPacket({
-        type: "device_motion",
-        accel_x: accelX,
-        accel_y: accelY,
-        accel_z: accelZ,
-        rot_alpha: rotAlpha,
-        rot_beta: rotBeta,
-        rot_gamma: rotGamma,
-        timestamp: Date.now(),
-      });
+        sendPacket({
+          type: "device_motion",
+          accel_x: accelX,
+          accel_y: accelY,
+          accel_z: accelZ,
+          rot_alpha: rotAlpha,
+          rot_beta: rotBeta,
+          rot_gamma: rotGamma,
+          timestamp: Date.now(),
+          sensitivity: pointerSensitivityRef.current,
+        });
     },
     [permissionState, sendPacket],
   );
@@ -370,8 +392,11 @@ export default function App() {
     e.preventDefault();
     if (permissionState !== "granted") return;
 
-    const touch = e.touches[0];
-    lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
+    initialTouchesRef.current = Array.from(e.touches).map(touch => ({
+      id: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY
+    }));
     setTouchActive(true);
   };
 
@@ -379,57 +404,92 @@ export default function App() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
-    if (!lastTouchRef.current || permissionState !== "granted") return;
+    if (initialTouchesRef.current.length === 0 || permissionState !== "granted") return;
 
-    const touch = e.touches[0];
-    const deltaX =
-      (touch.clientX - lastTouchRef.current.x) * pointerSensitivity;
-    const deltaY =
-      (touch.clientY - lastTouchRef.current.y) * pointerSensitivity;
+    const currentTouches = Array.from(e.touches);
 
-    // Validate touch data
-    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
-      console.error("Invalid touch delta values");
-      return;
-    }
+    if (currentTouches.length === 1) {
+      // Mouse control
+      const touch = currentTouches[0];
+      const initial = initialTouchesRef.current.find(t => t.id === touch.identifier);
+      if (!initial) return;
 
-    // Calculate swipe direction and magnitude for UI feedback
-    const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    setSwipeMagnitude(Math.round(magnitude));
+      const rawDeltaX = touch.clientX - initial.x;
+      const rawDeltaY = touch.clientY - initial.y;
 
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      setSwipeDirection(deltaX > 0 ? "Right" : "Left");
-    } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      setSwipeDirection(deltaY > 0 ? "Down" : "Up");
-    } else {
-      const horizontal = deltaX > 0 ? "Right" : "Left";
-      const vertical = deltaY > 0 ? "Down" : "Up";
-      setSwipeDirection(`${vertical}-${horizontal}`);
-    }
+      if (!Number.isFinite(rawDeltaX) || !Number.isFinite(rawDeltaY)) {
+        console.error("Invalid touch delta values");
+        return;
+      }
 
-    // Only send scroll packets for meaningful movements
-    if (
-      Math.abs(deltaX) > SCROLL_THRESHOLD ||
-      Math.abs(deltaY) > SCROLL_THRESHOLD
-    ) {
       sendPacket({
-        type: "scroll_move",
-        x: Math.round(deltaX),
-        y: Math.round(deltaY),
+        type: "mouse_move",
+        x: Math.round(rawDeltaX),
+        y: Math.round(rawDeltaY),
+        sensitivity: pointerSensitivityRef.current,
       });
+
+      // Update visual feedback (apply sensitivity for UI)
+      const deltaX = rawDeltaX * pointerSensitivity;
+      const deltaY = rawDeltaY * pointerSensitivity;
+      setCursorPosition((prev) => ({
+        x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
+        y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
+      }));
+
+    } else if (currentTouches.length >= 2) {
+      // Scroll
+      const touch = currentTouches[0];
+      const initial = initialTouchesRef.current.find(t => t.id === touch.identifier);
+      if (!initial) return;
+
+      const rawDeltaX = touch.clientX - initial.x;
+      const rawDeltaY = touch.clientY - initial.y;
+
+      if (!Number.isFinite(rawDeltaX) || !Number.isFinite(rawDeltaY)) {
+        console.error("Invalid touch delta values");
+        return;
+      }
+
+      // Calculate swipe direction and magnitude for UI feedback (apply sensitivity for UI)
+      const deltaX = rawDeltaX * scrollSensitivity;
+      const deltaY = rawDeltaY * scrollSensitivity;
+      const magnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      setSwipeMagnitude(Math.round(magnitude));
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        setSwipeDirection(deltaX > 0 ? "Right" : "Left");
+      } else if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        setSwipeDirection(deltaY > 0 ? "Down" : "Up");
+      } else {
+        const horizontal = deltaX > 0 ? "Right" : "Left";
+        const vertical = deltaY > 0 ? "Down" : "Up";
+        setSwipeDirection(`${vertical}-${horizontal}`);
+      }
+
+      // Only send scroll packets for meaningful movements
+      if (
+        Math.abs(deltaX) > SCROLL_THRESHOLD ||
+        Math.abs(deltaY) > SCROLL_THRESHOLD
+      ) {
+        sendPacket({
+          type: "scroll_move",
+          x: Math.round(rawDeltaX),
+          y: Math.round(rawDeltaY),
+          sensitivity: scrollSensitivityRef.current,
+        });
+      }
+
+      // Update visual feedback
+      setCursorPosition((prev) => ({
+        x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
+        y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
+      }));
     }
-
-    // Update visual feedback
-    setCursorPosition((prev) => ({
-      x: Math.max(0, Math.min(100, prev.x + deltaX / 3)),
-      y: Math.max(0, Math.min(100, prev.y + deltaY / 3)),
-    }));
-
-    lastTouchRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = () => {
-    lastTouchRef.current = null;
+    initialTouchesRef.current = [];
     setTouchActive(false);
     setSwipeDirection("None");
     setSwipeMagnitude(0);

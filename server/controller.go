@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sync"
 	"time"
 )
@@ -121,7 +122,7 @@ func (c *PacketController) updatePhysics() {
 
 	// Only move if there's meaningful velocity
 	if deltaX != 0 || deltaY != 0 {
-		log.Printf("Physics mouse move: vx=%.2f, vy=%.2f, dx=%d, dy=%d", c.velocityX, c.velocityY, deltaX, deltaY)
+		// fmt.Fprintf(os.Stderr, "\033[2K\rPhysics mouse move: vx=%8.2f, vy=%8.2f, dx=%8d, dy=%8d", c.velocityX, c.velocityY, deltaX, deltaY)
 		err := c.mouse.MoveRelative(deltaX, deltaY)
 		if err != nil {
 			log.Printf("Physics mouse move error: %v", err)
@@ -130,7 +131,7 @@ func (c *PacketController) updatePhysics() {
 }
 
 // updates velocity based on device acceleration or rotation depending on control mode
-func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma float64) {
+func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma, sensitivity float64) {
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
 
@@ -168,7 +169,7 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			// High velocity + opposite direction: maintain commitment (no acceleration)
 
 			if shouldAccelerate {
-				c.velocityX += -accelX * c.sensitivity * dt * 180 // Negate for correct left/right direction
+				c.velocityX += -accelX * sensitivity * dt * 180 // Use client sensitivity for table mode
 			}
 		}
 
@@ -185,21 +186,21 @@ func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBet
 			}
 
 			if shouldAccelerate {
-				c.velocityY += accelY * c.sensitivity * dt * 180 // Higher scaling for reactivity
+				c.velocityY += accelY * sensitivity * dt * 180 // Use client sensitivity for table mode
 			}
 		}
 
-		log.Printf("Table mode motion: accel=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, accelZ, c.velocityX, c.velocityY)
+		fmt.Fprintf(os.Stderr, "\033[2K\rTable mode motion: accel_x=%8.2f, accel_y=%8.2f, accel_z=%8.2f, velocity_x=%8.2f, velocity_y=%8.2f, sensitivity=%8.2f", accelX, accelY, accelZ, c.velocityX, c.velocityY, sensitivity)
 	} else { // Remote
 		// Remote mode: use rotation for velocity, with deadzone
 		// Use rotAlpha (yaw) for X movement, rotBeta (pitch) for Y movement
 		if math.Abs(rotAlpha) > c.rotDeadzone {
-			c.velocityY -= rotAlpha * 0.05 // Reduced sensitivity for handheld mode
+			c.velocityY -= rotAlpha * sensitivity * 0.01 // Apply client sensitivity for handheld mode
 		}
 		if math.Abs(rotGamma) > c.rotDeadzone {
-			c.velocityX -= rotGamma * 0.05 // Reduced sensitivity for handheld mode
+			c.velocityX -= rotGamma * sensitivity * 0.01 // Apply client sensitivity for handheld mode
 		}
-		log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
+		fmt.Fprintf(os.Stderr, "\033[2K\rRemote mode motion: rot_alpha=%8.2f, rot_beta=%8.2f, rot_gamma=%8.2f, velocity_x=%8.2f, velocity_y=%8.2f, sensitivity=%8.2f", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY, sensitivity)
 	}
 }
 
@@ -221,30 +222,37 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		p := packet.(*MouseMovePacket)
 		controlType := c.controlType
 
+		// Apply sensitivity multiplier
+		deltaX := int32(float64(p.DeltaX) * p.Sensitivity)
+		deltaY := int32(float64(p.DeltaY) * p.Sensitivity)
+
 		// TODO: test both modes to ensure correct mouse movement behavior
 		//		 leaving for now so that both will function the same
 		switch controlType {
 		case Flat:
-			log.Printf("Moving mouse (flat): dx=%d, dy=%d", p.DeltaX, p.DeltaY)
-			return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
+			log.Printf("Moving mouse (flat): dx=%d, dy=%d (raw: %d, %d, sens: %.2f)", deltaX, deltaY, p.DeltaX, p.DeltaY, p.Sensitivity)
+			return c.mouse.MoveRelative(deltaX, deltaY)
 		case Remote:
-			log.Printf("Moving mouse (remote): dx=%d, dy=%d", p.DeltaX, p.DeltaY)
-			return c.mouse.MoveRelative(p.DeltaX, p.DeltaY)
+			log.Printf("Moving mouse (remote): dx=%d, dy=%d (raw: %d, %d, sens: %.2f)", deltaX, deltaY, p.DeltaX, p.DeltaY, p.Sensitivity)
+			return c.mouse.MoveRelative(deltaX, deltaY)
 		default:
 			return fmt.Errorf("unknown control type: %d", controlType)
 		}
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, accel_z=%.2f, rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
+		fmt.Fprintf(os.Stderr, "\033[2K\rDevice motion: accel_x=%8.2f, accel_y=%8.2f, accel_z=%8.2f, rot_alpha=%8.2f, rot_beta=%8.2f, rot_gamma=%8.2f, timestamp=%13d, sensitivity=%8.2f", p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp, p.Sensitivity)
 		// Update physics state with new acceleration data
-		c.updateMotion(p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
+		c.updateMotion(p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Sensitivity)
 		return nil
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
-		log.Printf("Scrolling: delta_x=%d, delta_y=%d", p.DeltaX, p.DeltaY)
-		return c.mouse.Scroll(p.DeltaX, p.DeltaY)
+		// Apply sensitivity multiplier
+		deltaX := int32(float64(p.DeltaX) * p.Sensitivity)
+		deltaY := int32(float64(p.DeltaY) * p.Sensitivity)
+		log.Printf("Scrolling: delta_x=%d, delta_y=%d (raw: %d, %d, sens: %.2f)", deltaX, deltaY, p.DeltaX, p.DeltaY, p.Sensitivity)
+		return c.mouse.Scroll(deltaX, deltaY)
 
 	case SwitchMode:
 		// toggle between flat and remote control modes
