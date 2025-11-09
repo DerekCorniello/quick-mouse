@@ -69,8 +69,9 @@ func (p AuthPacket) Type() PacketType {
 }
 
 type MouseMovePacket struct {
-	DeltaX int32 `json:"x"`
-	DeltaY int32 `json:"y"`
+	DeltaX             int32   `json:"x"`
+	DeltaY             int32   `json:"y"`
+	PointerSensitivity float64 `json:"pointer_sensitivity"`
 }
 
 func (p MouseMovePacket) Type() PacketType {
@@ -78,10 +79,11 @@ func (p MouseMovePacket) Type() PacketType {
 }
 
 type DeviceMotionPacket struct {
-	RotAlpha  float64 `json:"rot_alpha"`
-	RotBeta   float64 `json:"rot_beta"`
-	RotGamma  float64 `json:"rot_gamma"`
-	Timestamp int64   `json:"timestamp"`
+	RotAlpha           float64 `json:"rot_alpha"`
+	RotBeta            float64 `json:"rot_beta"`
+	RotGamma           float64 `json:"rot_gamma"`
+	Timestamp          int64   `json:"timestamp"`
+	PointerSensitivity float64 `json:"pointer_sensitivity"`
 }
 
 func (p DeviceMotionPacket) Type() PacketType {
@@ -89,8 +91,9 @@ func (p DeviceMotionPacket) Type() PacketType {
 }
 
 type ScrollMovePacket struct {
-	DeltaX int32 `json:"x"`
-	DeltaY int32 `json:"y"`
+	DeltaX            int32   `json:"x"`
+	DeltaY            int32   `json:"y"`
+	ScrollSensitivity float64 `json:"scroll_sensitivity"`
 }
 
 func (p ScrollMovePacket) Type() PacketType {
