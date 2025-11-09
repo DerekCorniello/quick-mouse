@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 )
@@ -14,15 +15,17 @@ type PacketController struct {
 	controlType ControlType
 
 	// Physics state for device motion integration
-	physicsMu   sync.RWMutex
-	velocityX   float64
-	velocityY   float64
-	lastUpdate  time.Time
-	sensitivity float64
-	friction    float64
-	maxVelocity float64
-	isRunning   bool
-	stopPhysics chan struct{}
+	physicsMu     sync.RWMutex
+	velocityX     float64
+	velocityY     float64
+	lastUpdate    time.Time
+	sensitivity   float64
+	friction      float64
+	maxVelocity   float64
+	accelDeadzone float64
+	rotDeadzone   float64
+	isRunning     bool
+	stopPhysics   chan struct{}
 }
 
 // initializes the packet controller with a mouse backend
@@ -34,13 +37,15 @@ func NewPacketController(defaultMode ControlType) (*PacketController, error) {
 	}
 
 	controller := &PacketController{
-		mouse:       mouse,
-		controlType: defaultMode,
-		sensitivity: 1.5,   // Acceleration to velocity conversion factor
-		friction:    0.92,  // Velocity decay per frame (8% loss)
-		maxVelocity: 100.0, // Maximum velocity cap
-		stopPhysics: make(chan struct{}),
-		lastUpdate:  time.Now(),
+		mouse:         mouse,
+		controlType:   Flat,  // Start in Flat mode to match client default
+		sensitivity:   0.3,   // Reduced sensitivity for smoother control
+		friction:      0.92,  // Velocity decay per frame (8% loss)
+		maxVelocity:   100.0, // Maximum velocity cap
+		accelDeadzone: 0.05,  // Minimum acceleration to process
+		rotDeadzone:   0.1,   // Minimum rotation rate to process
+		stopPhysics:   make(chan struct{}),
+		lastUpdate:    time.Now(),
 	}
 
 	// Start physics update loop
@@ -112,16 +117,32 @@ func (c *PacketController) updatePhysics() {
 	}
 }
 
-// updates velocity based on device acceleration
-func (c *PacketController) updateMotion(accelX, accelY float64) {
+// updates velocity based on device acceleration or rotation depending on control mode
+func (c *PacketController) updateMotion(accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma float64) {
 	c.physicsMu.Lock()
 	defer c.physicsMu.Unlock()
 
-	// Integrate acceleration into velocity
-	c.velocityX += accelX * c.sensitivity
-	c.velocityY += accelY * c.sensitivity
-
-	log.Printf("Updated motion: accel=(%.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, c.velocityX, c.velocityY)
+	if c.controlType == Flat {
+		// Table mode: use acceleration for velocity, with deadzone
+		// Use accelX for Y (forward/back tilt), accelY for X (left/right tilt)
+		if math.Abs(accelY) > c.accelDeadzone {
+			c.velocityX += accelY * c.sensitivity
+		}
+		if math.Abs(accelX) > c.accelDeadzone {
+			c.velocityY += accelX * c.sensitivity
+		}
+		log.Printf("Table mode motion: accel=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", accelX, accelY, accelZ, c.velocityX, c.velocityY)
+	} else { // Remote
+		// Remote mode: use rotation for velocity, with deadzone
+		// Use rotAlpha (yaw) for X movement, rotBeta (pitch) for Y movement
+		if math.Abs(rotAlpha) > c.rotDeadzone {
+			c.velocityY -= rotAlpha * 0.05 // Reduced sensitivity for handheld mode
+		}
+		if math.Abs(rotBeta) > c.rotDeadzone {
+			c.velocityX -= rotGamma * 0.05 // Reduced sensitivity for handheld mode
+		}
+		log.Printf("Remote mode motion: rot=(%.2f, %.2f, %.2f), velocity=(%.2f, %.2f)", rotAlpha, rotBeta, rotGamma, c.velocityX, c.velocityY)
+	}
 }
 
 func (c *PacketController) SetControlType(ct ControlType) {
@@ -151,9 +172,9 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.Timestamp)
+		log.Printf("Device motion: accel_x=%.2f, accel_y=%.2f, accel_z=%.2f, rot_alpha=%.2f, rot_beta=%.2f, rot_gamma=%.2f, timestamp=%d", p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma, p.Timestamp)
 		// Update physics state with new acceleration data
-		c.updateMotion(p.AccelX, p.AccelY)
+		c.updateMotion(p.AccelX, p.AccelY, p.AccelZ, p.RotAlpha, p.RotBeta, p.RotGamma)
 		return nil
 
 	case ScrollMove:

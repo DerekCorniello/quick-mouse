@@ -87,6 +87,10 @@ func (p MouseMovePacket) Type() PacketType {
 type DeviceMotionPacket struct {
 	AccelX    float64 `json:"accel_x"`
 	AccelY    float64 `json:"accel_y"`
+	AccelZ    float64 `json:"accel_z"`
+	RotAlpha  float64 `json:"rot_alpha"`
+	RotBeta   float64 `json:"rot_beta"`
+	RotGamma  float64 `json:"rot_gamma"`
 	Timestamp int64   `json:"timestamp"`
 }
 

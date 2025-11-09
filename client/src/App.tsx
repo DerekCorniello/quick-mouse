@@ -17,7 +17,7 @@ export default function App() {
   const [sensitivity, setSensitivity] = useState(2);
   const [showSensorLog, setShowSensorLog] = useState(false);
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
-  const [isTable, setIsTable] = useState(false);
+   const [isTable, setIsTable] = useState(true);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
@@ -118,6 +118,22 @@ export default function App() {
           console.error('Invalid packet accel_y value:', packet.accel_y);
           return;
         }
+        if (packet.accel_z !== undefined && (typeof packet.accel_z !== 'number' || !Number.isFinite(packet.accel_z) || isNaN(packet.accel_z))) {
+          console.error('Invalid packet accel_z value:', packet.accel_z);
+          return;
+        }
+        if (packet.rot_alpha !== undefined && (typeof packet.rot_alpha !== 'number' || !Number.isFinite(packet.rot_alpha) || isNaN(packet.rot_alpha))) {
+          console.error('Invalid packet rot_alpha value:', packet.rot_alpha);
+          return;
+        }
+        if (packet.rot_beta !== undefined && (typeof packet.rot_beta !== 'number' || !Number.isFinite(packet.rot_beta) || isNaN(packet.rot_beta))) {
+          console.error('Invalid packet rot_beta value:', packet.rot_beta);
+          return;
+        }
+        if (packet.rot_gamma !== undefined && (typeof packet.rot_gamma !== 'number' || !Number.isFinite(packet.rot_gamma) || isNaN(packet.rot_gamma))) {
+          console.error('Invalid packet rot_gamma value:', packet.rot_gamma);
+          return;
+        }
 
         const message = JSON.stringify(packet);
         ws.send(message);
@@ -138,9 +154,7 @@ export default function App() {
     }
   }, [ws, authKey, connectWebSocket]);
 
-  // Device motion sensitivity constants
-  const ACCEL_DEADZONE = 0.01; // Minimum acceleration to send
-  const MOTION_UPDATE_RATE = 1000 / 60; // 60fps updates
+
 
   // Device motion handlers
   const handleDeviceMotion = useCallback((event: DeviceMotionEvent) => {
@@ -150,6 +164,7 @@ export default function App() {
     }
 
     const acceleration = event.acceleration;
+    const movement = event.rotationRate;
     if (!acceleration) {
       console.log('No acceleration data in device motion event');
       return;
@@ -158,15 +173,25 @@ export default function App() {
     // Get raw acceleration data
     const accelX = Number(acceleration.x) || 0;
     const accelY = Number(acceleration.y) || 0;
+    const accelZ = Number(acceleration.z) || 0;
 
-    console.log('Device motion event:', { accelX, accelY, permissionState });
+    // Get raw rotation data
+    const rotAlpha = Number(movement?.alpha) || 0;
+    const rotBeta = Number(movement?.beta) || 0;
+    const rotGamma = Number(movement?.gamma) || 0;
+
+    console.log('Device motion event:', { accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma, permissionState });
 
     // Always send packets for debugging, even if below deadzone
-    console.log('Sending device_motion packet:', { accelX, accelY });
+    console.log('Sending device_motion packet:', { accelX, accelY, accelZ, rotAlpha, rotBeta, rotGamma });
     sendPacket({
       type: 'device_motion',
       accel_x: accelX,
       accel_y: accelY,
+      accel_z: accelZ,
+      rot_alpha: rotAlpha,
+      rot_beta: rotBeta,
+      rot_gamma: rotGamma,
       timestamp: Date.now()
     });
   }, [permissionState, sendPacket]);
@@ -355,7 +380,10 @@ export default function App() {
           setButtonsAboveTouchpad(!buttonsAboveTouchpad)
         }
         isTable={isTable}
-        onToggleIsTable={() => setIsTable(!isTable)}
+        onToggleIsTable={() => {
+          setIsTable(!isTable);
+          sendPacket({ type: 'switch_mode' });
+        }}
         connectionStatus={connectionStatus}
       />
 
