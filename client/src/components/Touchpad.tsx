@@ -12,7 +12,7 @@ interface TouchpadProps {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
   onTouchEnd: () => void;
-  permissionState: 'checking' | 'prompt' | 'requesting' | 'granted' | 'denied';
+  permissionState: "checking" | "prompt" | "requesting" | "granted" | "denied";
 }
 
 export function Touchpad({
@@ -94,7 +94,9 @@ export function Touchpad({
       >
         <TouchAppIcon sx={{ fontSize: 64, color: "text.secondary", mb: 1 }} />
         <Box component="p" sx={{ color: "text.secondary" }}>
-          {permissionState === 'granted' ? "Slide to scroll" : "Waiting for permissions..."}
+          {permissionState === "granted"
+            ? "Slide to scroll"
+            : "Waiting for permissions..."}
         </Box>
       </Box>
     </Paper>
