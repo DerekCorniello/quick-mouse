@@ -1,22 +1,77 @@
 #!/bin/bash
 
 # Installation script for quick-mouse
-# This script installs dependencies, builds the project, and generates HTTPS certificates
+# This script clones the repo, installs dependencies, builds the project, and generates HTTPS certificates
 
 echo "Installing quick-mouse..."
+
+# Clone the repo if not already in it
+if [ ! -f "go.mod" ]; then
+    echo "Cloning quick-mouse repository..."
+    git clone https://github.com/DerekCorniello/quick-mouse.git .
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to clone repository."
+        exit 1
+    fi
+fi
+
+# Function to detect package manager
+detect_package_manager() {
+    if command -v apt &> /dev/null; then
+        echo "apt"
+    elif command -v yum &> /dev/null; then
+        echo "yum"
+    elif command -v pacman &> /dev/null; then
+        echo "pacman"
+    elif command -v brew &> /dev/null; then
+        echo "brew"
+    elif command -v apk &> /dev/null; then
+        echo "apk"
+    else
+        echo "unknown"
+    fi
+}
 
 # Function to install packages
 install_package() {
     local package=$1
     local manager=$2
+    local install_name=$package
+    # Adjust package names for specific managers
+    case $manager in
+        apt)
+            if [ "$package" = "go" ]; then install_name="golang"; fi
+            ;;
+        yum)
+            if [ "$package" = "go" ]; then install_name="golang"; fi
+            ;;
+        pacman)
+            # pacman uses 'go' as is
+            ;;
+        brew)
+            if [ "$package" = "nodejs" ]; then install_name="node"; fi
+            ;;
+        apk)
+            # apk uses 'go' and 'nodejs' as is
+            ;;
+    esac
     if ! command -v $package &> /dev/null; then
-        echo "$package not found. Installing..."
+        echo "$package not found. Installing $install_name..."
         case $manager in
             apt)
-                sudo apt update && sudo apt install -y $package
+                sudo apt update && sudo apt install -y $install_name
+                ;;
+            yum)
+                sudo yum install -y $install_name
+                ;;
+            pacman)
+                sudo pacman -S --noconfirm $install_name
                 ;;
             brew)
-                brew install $package
+                brew install $install_name
+                ;;
+            apk)
+                sudo apk add $install_name
                 ;;
             *)
                 echo "Please install $package manually."
@@ -28,17 +83,13 @@ install_package() {
     fi
 }
 
-# Detect OS
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    MANAGER="apt"
-    echo "Detected Linux. Using apt for package management."
-elif [[ "$OSTYPE" == "darwin"* ]]; then
-    MANAGER="brew"
-    echo "Detected macOS. Using brew for package management."
-else
-    echo "Unsupported OS. Please install dependencies manually: Go, Node.js, OpenSSL"
+# Detect package manager
+MANAGER=$(detect_package_manager)
+if [ "$MANAGER" = "unknown" ]; then
+    echo "No supported package manager found. Please install dependencies manually: Go, Node.js, OpenSSL"
     exit 1
 fi
+echo "Detected package manager: $MANAGER"
 
 # Install Go
 install_package go $MANAGER

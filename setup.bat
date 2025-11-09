@@ -1,6 +1,6 @@
 @echo off
 REM Installation script for quick-mouse on Windows
-REM This script installs dependencies, builds the project, and generates HTTPS certificates
+REM This script clones the repo, installs dependencies, builds the project, and generates HTTPS certificates
 
 echo Installing quick-mouse...
 
@@ -10,24 +10,47 @@ if "%OS%" neq "Windows_NT" (
     exit /b 1
 )
 
+REM Clone the repo if not already in it
+if not exist go.mod (
+    echo Cloning quick-mouse repository...
+    git clone https://github.com/DerekCorniello/quick-mouse.git .
+    if %errorlevel% neq 0 (
+        echo Error: Failed to clone repository.
+        exit /b 1
+    )
+)
+
 REM Function to install packages using winget or choco
 :install_package
 setlocal
 set PACKAGE=%1
-where %PACKAGE% >nul 2>nul
+set CHECK_CMD=%PACKAGE%
+set INSTALL_NAME=%PACKAGE%
+REM Adjust for Windows naming
+if "%PACKAGE%"=="nodejs" (
+    set CHECK_CMD=node
+    set INSTALL_NAME=nodejs
+)
+where %CHECK_CMD% >nul 2>nul
 if %errorlevel% equ 0 (
     echo %PACKAGE% is already installed.
 ) else (
-    echo %PACKAGE% not found. Installing...
+    echo %PACKAGE% not found. Installing %INSTALL_NAME%...
     REM Try winget first
     where winget >nul 2>nul
     if %errorlevel% equ 0 (
-        winget install %PACKAGE%
+        if "%PACKAGE%"=="go" (
+            winget install GoLang.Go
+        ) else if "%PACKAGE%"=="nodejs" (
+            winget install Microsoft.NodeJS
+        ) else (
+            winget install %INSTALL_NAME%
+        )
     ) else (
         REM Try choco
         where choco >nul 2>nul
         if %errorlevel% equ 0 (
-            choco install %PACKAGE% -y
+            choco install %INSTALL_NAME% -y
         ) else (
             echo Please install %PACKAGE% manually from https://golang.org/dl/ or https://nodejs.org/
             exit /b 1
