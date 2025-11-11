@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (c *PacketController) logIfEnabled(format string, args ...interface{}) {
+func (c *PacketController) logIfEnabled(format string, args ...any) {
 	if c.verbose {
 		log.Printf(format, args...)
 	}
@@ -58,9 +58,9 @@ func NewPacketController(verbose bool) (*PacketController, error) {
 	controller := &PacketController{
 		mouse:              mouse,
 		sensitivity:        3.0,
-		friction:           0.98,
+		friction:           0.9,
 		maxVelocity:        150.0,
-		rotDeadzone:        0.1,
+		rotDeadzone:        2.0,
 		stopPhysics:        make(chan struct{}),
 		lastUpdate:         time.Now(),
 		baselineRotAlpha:   0.0,
@@ -117,7 +117,7 @@ func (c *PacketController) updatePhysics() {
 	c.velocityY *= c.friction
 
 	// snap to zero when velocity is very small (prevents oscillation)
-	velocityThreshold := 0.2 // match low velocity threshold for consistency
+	velocityThreshold := 0.01 // match low velocity threshold for consistency
 	if math.Abs(c.velocityX) < velocityThreshold {
 		c.velocityX = 0
 	}
@@ -153,6 +153,17 @@ func (c *PacketController) updatePhysics() {
 	}
 }
 
+// normalizes angle difference to -180 to 180 degrees to handle wrapping
+func normalizeAngleDiff(diff float64) float64 {
+	for diff > 180 {
+		diff -= 360
+	}
+	for diff < -180 {
+		diff += 360
+	}
+	return diff
+}
+
 // updates velocity based on device rotation
 func (c *PacketController) updateMotion(rotAlpha, rotBeta, rotGamma float64) {
 	c.physicsMu.Lock()
@@ -163,12 +174,21 @@ func (c *PacketController) updateMotion(rotAlpha, rotBeta, rotGamma float64) {
 	rotBeta -= c.baselineRotBeta
 	rotGamma -= c.baselineRotGamma
 
-	// Use rotAlpha (yaw) for Y movement, rotGamma for X movement
-	if math.Abs(rotAlpha) > c.rotDeadzone {
-		c.velocityY -= rotAlpha * 0.05
+	// normalize to handle angle wrapping
+	rotAlpha = normalizeAngleDiff(rotAlpha)
+	rotBeta = normalizeAngleDiff(rotBeta)
+	rotGamma = normalizeAngleDiff(rotGamma)
+
+	// use rotBeta (pitch) for Y movement, rotGamma (roll) for X movement
+	// centering force (always applied, weak)
+	c.velocityY -= rotBeta * 0.0005
+	c.velocityX += rotGamma * 0.0005
+	// movement force (only above deadzone)
+	if math.Abs(rotBeta) > c.rotDeadzone {
+		c.velocityY -= rotBeta * 0.01
 	}
 	if math.Abs(rotGamma) > c.rotDeadzone {
-		c.velocityX -= rotGamma * 0.05
+		c.velocityX += rotGamma * 0.01
 	}
 }
 
@@ -178,14 +198,14 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 	switch packet.Type() {
 	case MouseMove:
 		p := packet.(*MouseMovePacket)
-		sensitivity := p.PointerSensitivity / 10.0
+		sensitivity := p.PointerSensitivity / 25.0
 		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
 		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
 		return c.mouse.MoveRelative(scaledDeltaX, scaledDeltaY)
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		sensitivity := p.PointerSensitivity / 10.0
+		sensitivity := p.PointerSensitivity / 25.0
 		scaledRotAlpha := p.RotAlpha * sensitivity
 		scaledRotBeta := p.RotBeta * sensitivity
 		scaledRotGamma := p.RotGamma * sensitivity
@@ -194,7 +214,7 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
-		sensitivity := p.ScrollSensitivity / 10.0
+		sensitivity := p.ScrollSensitivity / 1000.0
 		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
 		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
 		return c.mouse.Scroll(scaledDeltaX, scaledDeltaY)

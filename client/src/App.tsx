@@ -238,18 +238,16 @@ export default function App() {
   );
 
   // Device motion handlers
-  const handleDeviceMotion = useCallback(
-    (event: DeviceMotionEvent) => {
+  const handleDeviceOrientation = useCallback(
+    (event: DeviceOrientationEvent) => {
       if (appPhase === "permissions") {
         return;
       }
 
-      const movement = event.rotationRate;
-
       // Get raw rotation data
-      const rotAlpha = Number(movement?.alpha) || 0;
-      const rotBeta = Number(movement?.beta) || 0;
-      const rotGamma = Number(movement?.gamma) || 0;
+      const rotAlpha = Number(event.alpha) || 0;
+      const rotBeta = Number(event.beta) || 0;
+      const rotGamma = Number(event.gamma) || 0;
 
       if (
         appPhase === "calibrating" &&
@@ -331,7 +329,7 @@ export default function App() {
         ws.close();
       }
       // Clean up device motion listener
-      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectWebSocket]);
@@ -351,15 +349,15 @@ export default function App() {
     return () => clearInterval(healthCheck);
   }, [lastMessageTime, connectionStatus, authKey, connectWebSocket]);
 
-  // Add device motion listener on mount
+  // Add device orientation listener on mount
   useEffect(() => {
-    if (typeof DeviceMotionEvent !== "undefined") {
-      window.addEventListener("devicemotion", handleDeviceMotion);
+    if (typeof DeviceOrientationEvent !== "undefined") {
+      window.addEventListener("deviceorientation", handleDeviceOrientation);
     }
     return () => {
-      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
     };
-  }, [handleDeviceMotion]);
+  }, [handleDeviceOrientation]);
 
   // Handle calibration completion delay
   useEffect(() => {
