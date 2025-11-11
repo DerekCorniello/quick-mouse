@@ -240,6 +240,7 @@ var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
 var lastLog string
 var lastAction string
 var physicsRunning bool
+var displayUpdateChan = make(chan struct{}, 10)
 
 func enterAlternateScreen() {
 	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
@@ -293,7 +294,10 @@ func logIfEnabled(format string, args ...any) {
 		lastLog = msg
 		log.Print(msg)
 	}
-	updateDisplay()
+	select {
+	case displayUpdateChan <- struct{}{}:
+	default:
+	}
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -350,10 +354,17 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	lastAction = "auth"
 
 	connectedClients = true
-	updateDisplay()
+	// i still dont understand channels that well...
+	select {
+	case displayUpdateChan <- struct{}{}:
+	default:
+	}
 	defer func() {
 		connectedClients = false
-		updateDisplay()
+		select {
+		case displayUpdateChan <- struct{}{}:
+		default:
+		}
 	}()
 
 	// start keep-alive mechanism
@@ -459,6 +470,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
+		close(displayUpdateChan)
 		exitAlternateScreen()
 		os.Exit(0)
 	}()
@@ -471,6 +483,13 @@ func main() {
 	}
 	defer controller.Close()
 	physicsRunning = true
+
+	// Start display update goroutine
+	go func() {
+		for range displayUpdateChan {
+			updateDisplay()
+		}
+	}()
 
 	// serve static files from the React build directory
 	fs := http.FileServer(http.Dir("./client/build"))
