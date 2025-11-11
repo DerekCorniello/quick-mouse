@@ -240,7 +240,7 @@ var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
 var lastLog string
 var lastAction string
 var physicsRunning bool
-var displayUpdateChan = make(chan struct{}, 10)
+var displayUpdateChan = make(chan struct{}, 100)
 
 func enterAlternateScreen() {
 	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
@@ -360,6 +360,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 	}
 	defer func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logIfEnabled("Panic in connection cleanup: %v", r)
+			}
+		}()
+		logIfEnabled("Connection closed, resetting client state")
 		connectedClients = false
 		select {
 		case displayUpdateChan <- struct{}{}:
