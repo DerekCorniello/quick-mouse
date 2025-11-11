@@ -33,6 +33,8 @@ export default function App() {
   const [scrollSensitivity, setScrollSensitivity] = useState(5);
   const pointerSensitivityRef = useRef(5);
   const scrollSensitivityRef = useRef(5);
+  const scrollAccumulatorRef = useRef({ x: 0, y: 0 });
+  const rafIdRef = useRef<number | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -446,8 +448,8 @@ export default function App() {
             isLeftPressed={isLeftPressed}
             isRightPressed={isRightPressed}
             onTouchStart={(e) => handleTouchStart(e, appPhase, initialTouchesRef, setTouchActive)}
-            onTouchMove={(e) => handleTouchMove(e, initialTouchesRef, sendPacket, pointerSensitivityRef, scrollSensitivityRef)}
-            onTouchEnd={() => handleTouchEnd(initialTouchesRef, setTouchActive, setSwipeDirection, setSwipeMagnitude)}
+            onTouchMove={(e) => handleTouchMove(e, initialTouchesRef, sendPacket, pointerSensitivityRef, scrollSensitivityRef, scrollAccumulatorRef, naturalScroll, rafIdRef)}
+            onTouchEnd={() => handleTouchEnd(initialTouchesRef, setTouchActive, setSwipeDirection, setSwipeMagnitude, rafIdRef)}
             permissionState={appPhase === "main" ? "granted" : "denied"}
           />
           {!buttonsAboveTouchpad && (

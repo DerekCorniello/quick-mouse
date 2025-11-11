@@ -214,9 +214,9 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case ScrollMove:
 		p := packet.(*ScrollMovePacket)
-		sensitivity := p.ScrollSensitivity / 1000.0
-		scaledDeltaX := int32(float64(p.DeltaX) * sensitivity)
-		scaledDeltaY := int32(float64(p.DeltaY) * sensitivity)
+		sensitivity := p.ScrollSensitivity / 50.0
+		scaledDeltaX := int32(p.DeltaX * sensitivity)
+		scaledDeltaY := int32(p.DeltaY * sensitivity)
 		return c.mouse.Scroll(scaledDeltaX, scaledDeltaY)
 
 	case LeftClickUp:
