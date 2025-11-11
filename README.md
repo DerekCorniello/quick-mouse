@@ -37,11 +37,11 @@ curl -fsSL https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/set
 ### Windows
 
 ```bash
-  curl -s https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat | cmd
+  curl -s https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat | cmd
 ```
 
 ```bash
- iex (iwr https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat -UseBasicParsing).Content
+ iex (iwr https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat -UseBasicParsing).Content
 ```
 
 ## Getting Started
