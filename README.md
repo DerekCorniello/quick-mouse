@@ -1,14 +1,15 @@
 # Quick Mouse
 
+![Go Badge]({https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white})
 A wireless mouse solution that turns your smartphone into a fully-functional input device for your computer.
 
 ## Overview
 
-Quick Mouse was built by UC computer science students who needed a reliable way to control computers without carrying extra hardware. Whether you forgot your mouse, need to present slides remotely, or want a quick navigation tool, Quick Mouse provides a seamless wireless input experience.
+Quick Mouse turns your phone into a precise wireless mouse. No extra hardware. Open the app, connect, and control your desktop with smooth, low-latency gestures. Designed by two University of Cincinnati computer science students and winning first place in the 2025 MakeUC Hackathon, Quick Mouse leverages modern web technologies and native system integration to deliver a seamless experience. By leveraging web sockets and your phone's built-in sensors, Quick Mouse provides a responsive and intuitive way to interact with your computer from a distance.
 
 ## Features
 
-- **Multiple Input Modes**: Traditional mouse, handheld pointer, or trackpad
+- **Multiple Input Modes**: Handheld pointer, or trackpad
 - **QR Code Pairing**: Instant secure connection with no manual configuration
 - **Low Latency**: Optimized for real-time control even on shared WiFi networks
 - **Cross-Platform**: Works on Windows, macOS, and Linux
@@ -16,7 +17,7 @@ Quick Mouse was built by UC computer science students who needed a reliable way 
 
 ## Installation
 
-Run the install command.
+Run the relevant install command depending on the OS of the system you are controlling.
 
 ### Linux and MacOS
 
@@ -26,19 +27,18 @@ Run the install command.
 
 ### Windows
 
-```bash
-  curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
 ```
-
-```bash
- iex (iwr https://raw.githubusercontent.com/user/repo/main/script.bat -UseBasicParsing).Content curl -s https://raw.githubusercontent.com/user/repo/main/script.bat | cmd
+insert windows installation instructions here
 ```
 
 ## Getting Started
 
-1. **Start the App**: Launch Quick Mouse on your computer by running `quick-mouse` in your terminal
+1. **Start the App**: Launch Quick Mouse on your computer by running `quick-mouse` in your terminal or starting the application
 2. **Scan QR Code**: Open Quick Mouse on your phone and scan the displayed QR code
-3. **Start Controlling**: Your phone is now a wireless mouse
+3. **Accept Permissions**: Quick Mouse will request necessary permissions for pointer control (gyroscope sensor information)
+4. **Perform Calibration**: Follow the on-screen instructions to calibrate your device for optimal performance.
+5. Start using your phone as a mouse! You can use your phone as a pointer or use the built-in trackpad mode.
+6. **Make Adjustments**: Access settings to customize sensitivity, gestures, and other preferences.
 
 ## Technical Stack
 
@@ -46,19 +46,6 @@ Run the install command.
 - **Frontend**: React - intuitive touch and gesture interface
 - **Communication**: WebSocket-based event streaming for minimal latency
 - **Security**: Encrypted pairing through QR-code exchange
-
-## How It Works
-
-Quick Mouse establishes a local WebSocket connection between your phone and computer. Touch events are captured by the React frontend and streamed to the Go backend, which translates them into native pointer actions with minimal delay.
-
-## Development
-
-Built with a focus on:
-
-- Real-time event handling and network performance
-- Cross-platform compatibility and input normalization
-- Secure device pairing with user-friendly flows
-- Gesture detection that balances precision and usability
 
 ## Contributing
 
