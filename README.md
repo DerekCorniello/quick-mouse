@@ -22,13 +22,17 @@ Run the relevant install command depending on the OS of the system you are contr
 ### Linux and MacOS
 
 ```bash
-  curl -fsSl https://github.com/DerekCorniello/raw/main/setup.sh | bash
+  curl -fsSl https://github.com/DerekCorniello/quick-mouse/raw/main/setup.sh | bash
 ```
 
 ### Windows
 
+```bash
+  curl -s https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat | cmd
 ```
-insert windows installation instructions here
+
+```bash
+ iex (iwr https://github.com/DerekCorniello/quick-mouse/raw/main/setup.bat -UseBasicParsing).Content
 ```
 
 ## Getting Started

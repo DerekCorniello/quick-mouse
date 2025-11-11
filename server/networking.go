@@ -91,8 +91,8 @@ func (p DeviceMotionPacket) Type() PacketType {
 }
 
 type ScrollMovePacket struct {
-	DeltaX            int32   `json:"x"`
-	DeltaY            int32   `json:"y"`
+	DeltaX            float64 `json:"x"`
+	DeltaY            float64 `json:"y"`
 	ScrollSensitivity float64 `json:"scrollSensitivity"`
 }
 

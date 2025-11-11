@@ -33,6 +33,8 @@ export default function App() {
   const [scrollSensitivity, setScrollSensitivity] = useState(5);
   const pointerSensitivityRef = useRef(5);
   const scrollSensitivityRef = useRef(5);
+  const scrollAccumulatorRef = useRef({ x: 0, y: 0 });
+  const rafIdRef = useRef<number | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -238,18 +240,16 @@ export default function App() {
   );
 
   // Device motion handlers
-  const handleDeviceMotion = useCallback(
-    (event: DeviceMotionEvent) => {
+  const handleDeviceOrientation = useCallback(
+    (event: DeviceOrientationEvent) => {
       if (appPhase === "permissions") {
         return;
       }
 
-      const movement = event.rotationRate;
-
       // Get raw rotation data
-      const rotAlpha = Number(movement?.alpha) || 0;
-      const rotBeta = Number(movement?.beta) || 0;
-      const rotGamma = Number(movement?.gamma) || 0;
+      const rotAlpha = Number(event.alpha) || 0;
+      const rotBeta = Number(event.beta) || 0;
+      const rotGamma = Number(event.gamma) || 0;
 
       if (
         appPhase === "calibrating" &&
@@ -331,7 +331,7 @@ export default function App() {
         ws.close();
       }
       // Clean up device motion listener
-      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectWebSocket]);
@@ -351,15 +351,15 @@ export default function App() {
     return () => clearInterval(healthCheck);
   }, [lastMessageTime, connectionStatus, authKey, connectWebSocket]);
 
-  // Add device motion listener on mount
+  // Add device orientation listener on mount
   useEffect(() => {
-    if (typeof DeviceMotionEvent !== "undefined") {
-      window.addEventListener("devicemotion", handleDeviceMotion);
+    if (typeof DeviceOrientationEvent !== "undefined") {
+      window.addEventListener("deviceorientation", handleDeviceOrientation);
     }
     return () => {
-      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
     };
-  }, [handleDeviceMotion]);
+  }, [handleDeviceOrientation]);
 
   // Handle calibration completion delay
   useEffect(() => {
@@ -448,8 +448,8 @@ export default function App() {
             isLeftPressed={isLeftPressed}
             isRightPressed={isRightPressed}
             onTouchStart={(e) => handleTouchStart(e, appPhase, initialTouchesRef, setTouchActive)}
-            onTouchMove={(e) => handleTouchMove(e, initialTouchesRef, sendPacket, pointerSensitivityRef, scrollSensitivityRef)}
-            onTouchEnd={() => handleTouchEnd(initialTouchesRef, setTouchActive, setSwipeDirection, setSwipeMagnitude)}
+            onTouchMove={(e) => handleTouchMove(e, initialTouchesRef, sendPacket, pointerSensitivityRef, scrollSensitivityRef, scrollAccumulatorRef, naturalScroll, rafIdRef)}
+            onTouchEnd={() => handleTouchEnd(initialTouchesRef, setTouchActive, setSwipeDirection, setSwipeMagnitude, rafIdRef)}
             permissionState={appPhase === "main" ? "granted" : "denied"}
           />
           {!buttonsAboveTouchpad && (

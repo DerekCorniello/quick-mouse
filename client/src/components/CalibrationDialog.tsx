@@ -49,6 +49,7 @@ export function CalibrationDialog({
         </Typography>
         <Typography sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}>
           Calibration will zero your device motion sensors for accurate control.
+          Ensure you point your device at the center of the main display before starting.
           Hold your device steady and avoid movement during calibration.
         </Typography>
         <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>

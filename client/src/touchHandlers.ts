@@ -27,7 +27,10 @@ export const handleTouchMove = (
   initialTouchesRef: React.MutableRefObject<{ id: number; x: number; y: number }[]>,
   sendPacket: (packet: Packet) => void,
   pointerSensitivityRef: React.MutableRefObject<number>,
-  scrollSensitivityRef: React.MutableRefObject<number>
+  scrollSensitivityRef: React.MutableRefObject<number>,
+  scrollAccumulatorRef: React.MutableRefObject<{ x: number; y: number }>,
+  naturalScroll: boolean,
+  rafIdRef: React.MutableRefObject<number | null>
 ) => {
   e.preventDefault();
   const currentTouches = Array.from(e.touches);
@@ -70,16 +73,29 @@ export const handleTouchMove = (
       return;
     }
 
-    const SCROLL_THRESHOLD = 3;
-    if (
-      Math.abs(rawDeltaX) > SCROLL_THRESHOLD ||
-      Math.abs(rawDeltaY) > SCROLL_THRESHOLD
-    ) {
-      sendPacket({
-        type: "scroll_move",
-        x: Math.round(rawDeltaX),
-        y: Math.round(rawDeltaY),
-        scrollSensitivity: scrollSensitivityRef.current,
+    // Accumulate deltas
+    scrollAccumulatorRef.current.x += rawDeltaX;
+    scrollAccumulatorRef.current.y += rawDeltaY;
+
+    // Update initial position to avoid drift
+    initial.x = touch.clientX;
+    initial.y = touch.clientY;
+
+    // Trigger RAF if not already running
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        const accumulated = scrollAccumulatorRef.current;
+        if (accumulated.x !== 0 || accumulated.y !== 0) {
+          sendPacket({
+            type: "scroll_move",
+            x: accumulated.x,
+            y: naturalScroll ? -accumulated.y : accumulated.y,
+            scrollSensitivity: scrollSensitivityRef.current,
+          });
+          // Reset accumulator
+          scrollAccumulatorRef.current = { x: 0, y: 0 };
+        }
+        rafIdRef.current = null;
       });
     }
   }
@@ -89,12 +105,18 @@ export const handleTouchEnd = (
   initialTouchesRef: React.MutableRefObject<{ id: number; x: number; y: number }[]>,
   setTouchActive: (active: boolean) => void,
   setSwipeDirection: (direction: string) => void,
-  setSwipeMagnitude: (magnitude: number) => void
+  setSwipeMagnitude: (magnitude: number) => void,
+  rafIdRef: React.MutableRefObject<number | null>
 ) => {
   initialTouchesRef.current = [];
   setTouchActive(false);
   setSwipeDirection("None");
   setSwipeMagnitude(0);
+  // Cancel any pending RAF
+  if (rafIdRef.current !== null) {
+    cancelAnimationFrame(rafIdRef.current);
+    rafIdRef.current = null;
+  }
 };
 
 export const handleLeftTouchStart = (

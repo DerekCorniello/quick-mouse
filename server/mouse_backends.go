@@ -2,11 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"time"
 
-	"github.com/bendahl/uinput"
 	"github.com/go-vgo/robotgo"
 )
 
@@ -64,20 +64,21 @@ type MouseController interface {
 	Release(button string) error
 	GetPosition() (int, int, error)
 	Scroll(deltaX, deltaY int32) error
+	CenterOnMainDisplay() error
 	Close() error
 }
 
 // creates a mouse controller for the detected platform
 func NewMouseController() (MouseController, error) {
 	displayType := DetectDisplayServer()
-	fmt.Printf("Detected display server: %s\n", displayType)
+	log.Printf("Detected display server: %s", displayType)
 
 	switch displayType {
 	case Wayland:
-		fmt.Println("Using uinput backend")
-		return NewWaylandMouse()
+		log.Printf("Using uinput backend")
+		return newWaylandMouse()
 	case X11, Windows, MacOS:
-		fmt.Println("Using robotgo backend")
+		log.Printf("Using robotgo backend")
 		return NewRobotgoMouse()
 	default:
 		return nil, fmt.Errorf("unsupported display server: %s", displayType)
@@ -132,6 +133,10 @@ func (m *UniversalMouse) GetPosition() (int, int, error) {
 
 func (m *UniversalMouse) Scroll(deltaX, deltaY int32) error {
 	return m.controller.Scroll(deltaX, deltaY)
+}
+
+func (m *UniversalMouse) CenterOnMainDisplay() error {
+	return m.controller.CenterOnMainDisplay()
 }
 
 // NOTE: Not used in main server controller, available for testing/other purposes
@@ -229,99 +234,19 @@ func (m *RobotgoMouse) GetPosition() (int, int, error) {
 }
 
 func (m *RobotgoMouse) Scroll(deltaX, deltaY int32) error {
-	// robotgo.Scroll expects (vertical, horizontal) - so Y first, then X
-	robotgo.Scroll(int(deltaY), int(deltaX))
+	robotgo.Scroll(int(deltaX), int(deltaY))
 	return nil
+}
+
+func (m *RobotgoMouse) CenterOnMainDisplay() error {
+	mainId := robotgo.GetMainId()
+	x, y, w, h := robotgo.GetDisplayBounds(mainId)
+	centerX := x + w/2
+	centerY := y + h/2
+	return m.MoveTo(centerX, centerY)
 }
 
 // close is a no-op for robotgo
 func (m *RobotgoMouse) Close() error {
 	return nil
-}
-
-type WaylandMouse struct {
-	device uinput.Mouse
-}
-
-func NewWaylandMouse() (*WaylandMouse, error) {
-	mouse, err := uinput.CreateMouse("/dev/uinput", []byte("virtual-mouse"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create uinput device: %v\n"+
-			"Make sure you have permissions. Run:\n"+
-			"  sudo modprobe uinput\n"+
-			"  sudo usermod -aG input $USER\n"+
-			"Then log out and back in.", err)
-	}
-
-	return &WaylandMouse{device: mouse}, nil
-}
-
-func (m *WaylandMouse) MoveRelative(dx, dy int32) error {
-	return m.device.Move(dx, dy)
-}
-
-func (m *WaylandMouse) MoveTo(x, y int) error {
-	return fmt.Errorf("absolute positioning not supported with uinput backend")
-}
-
-func (m *WaylandMouse) Click(button string) error {
-	switch button {
-	case "left":
-		return m.device.LeftClick()
-	case "right":
-		return m.device.RightClick()
-	case "middle":
-		return m.device.MiddleClick()
-	default:
-		return fmt.Errorf("Unknown wayland click action %v", button)
-	}
-}
-
-func (m *WaylandMouse) Press(button string) error {
-	switch button {
-	case "left":
-		return m.device.LeftPress()
-	case "right":
-		return m.device.RightPress()
-	case "middle":
-		return m.device.MiddlePress()
-	default:
-		return fmt.Errorf("Unknown wayland click action %v", button)
-	}
-}
-
-func (m *WaylandMouse) Release(button string) error {
-	switch button {
-	case "left":
-		return m.device.LeftRelease()
-	case "right":
-		return m.device.RightRelease()
-	case "middle":
-		return m.device.MiddleRelease()
-	default:
-		return fmt.Errorf("Unknown wayland click action %v", button)
-	}
-}
-
-func (m *WaylandMouse) GetPosition() (int, int, error) {
-	return 0, 0, fmt.Errorf("position not available on Wayland backend")
-}
-
-func (m *WaylandMouse) Scroll(deltaX, deltaY int32) error {
-	// uinput Wheel takes (isVertical bool, delta int32)
-	if deltaY != 0 {
-		if err := m.device.Wheel(false, deltaY); err != nil {
-			return err
-		}
-	}
-	if deltaX != 0 {
-		if err := m.device.Wheel(true, deltaX); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m *WaylandMouse) Close() error {
-	return m.device.Close()
 }
