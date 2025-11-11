@@ -1,11 +1,20 @@
 # Quick Mouse
 
-![Go Badge]({https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white})
+![Go Badge](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white) ![React Badge](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+
 A wireless mouse solution that turns your smartphone into a fully-functional input device for your computer.
 
 ## Overview
 
-Quick Mouse turns your phone into a precise wireless mouse. No extra hardware. Open the app, connect, and control your desktop with smooth, low-latency gestures. Designed by two University of Cincinnati computer science students and winning first place in the 2025 MakeUC Hackathon, Quick Mouse leverages modern web technologies and native system integration to deliver a seamless experience. By leveraging web sockets and your phone's built-in sensors, Quick Mouse provides a responsive and intuitive way to interact with your computer from a distance.
+Quick Mouse turns your phone into a precise wireless mouse. No extra hardware. Open the app, connect, and control your desktop with smooth, low-latency gestures. Designed by two University of Cincinnati computer science students and winning first place in the [2025 MakeUC Hackathon](https://devpost.com/software/quick-mouse), Quick Mouse leverages modern web technologies and native system integration to deliver a seamless experience. By leveraging web sockets and your phone's built-in sensors, Quick Mouse provides a responsive and intuitive way to interact with your computer from a distance.
+
+## Demo
+### Video
+[<img src="https://img.youtube.com/vi/Cr0FrOouxdk/hqdefault.jpg" width="1920" height="1080"
+/>](https://www.youtube.com/embed/Cr0FrOouxdk)
+
+### Pictures
+![Home Page](pictures/quick_mouse_home.png)
 
 ## Features
 
