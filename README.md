@@ -34,14 +34,10 @@ Run the relevant install command depending on the OS of the system you are contr
 curl -fsSL https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.sh | bash
 ```
 
-### Windows
+### Windows (Must be run in PowerShell)
 
 ```bash
-  curl -s https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat | cmd
-```
-
-```bash
- iex (iwr https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat -UseBasicParsing).Content
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat" -OutFile "$env:TEMP\setup.bat"; & cmd.exe /c "$env:TEMP\setup.bat"
 ```
 
 ## Getting Started
