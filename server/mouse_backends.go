@@ -234,8 +234,7 @@ func (m *RobotgoMouse) GetPosition() (int, int, error) {
 }
 
 func (m *RobotgoMouse) Scroll(deltaX, deltaY int32) error {
-	// robotgo.Scroll expects (vertical, horizontal) - so Y first, then X
-	robotgo.Scroll(int(deltaY), int(deltaX))
+	robotgo.Scroll(int(deltaX), int(deltaY))
 	return nil
 }
 
