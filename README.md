@@ -31,7 +31,7 @@ Run the relevant install command depending on the OS of the system you are contr
 ### Linux and MacOS
 
 ```bash
-  curl -fsSl https://github.com/DerekCorniello/quick-mouse/raw/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.sh | bash
 ```
 
 ### Windows
