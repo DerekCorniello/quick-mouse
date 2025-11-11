@@ -64,6 +64,7 @@ type MouseController interface {
 	Release(button string) error
 	GetPosition() (int, int, error)
 	Scroll(deltaX, deltaY int32) error
+	CenterOnMainDisplay() error
 	Close() error
 }
 
@@ -132,6 +133,10 @@ func (m *UniversalMouse) GetPosition() (int, int, error) {
 
 func (m *UniversalMouse) Scroll(deltaX, deltaY int32) error {
 	return m.controller.Scroll(deltaX, deltaY)
+}
+
+func (m *UniversalMouse) CenterOnMainDisplay() error {
+	return m.controller.CenterOnMainDisplay()
 }
 
 // NOTE: Not used in main server controller, available for testing/other purposes
@@ -232,6 +237,14 @@ func (m *RobotgoMouse) Scroll(deltaX, deltaY int32) error {
 	// robotgo.Scroll expects (vertical, horizontal) - so Y first, then X
 	robotgo.Scroll(int(deltaY), int(deltaX))
 	return nil
+}
+
+func (m *RobotgoMouse) CenterOnMainDisplay() error {
+	mainId := robotgo.GetMainId()
+	x, y, w, h := robotgo.GetDisplayBounds(mainId)
+	centerX := x + w/2
+	centerY := y + h/2
+	return m.MoveTo(centerX, centerY)
 }
 
 // close is a no-op for robotgo

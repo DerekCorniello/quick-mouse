@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/bendahl/uinput"
+	"github.com/go-vgo/robotgo"
 )
 
 type WaylandMouse struct {
@@ -89,6 +90,21 @@ func (m *WaylandMouse) Scroll(deltaX, deltaY int32) error {
 		}
 	}
 	return nil
+}
+
+func (m *WaylandMouse) CenterOnMainDisplay() error {
+	mainId := robotgo.GetMainId()
+	x, y, w, h := robotgo.GetDisplayBounds(mainId)
+	centerX := x + w/2
+	centerY := y + h/2
+
+	width, height := robotgo.GetScreenSize()
+	touch, err := uinput.CreateTouchPad("/dev/uinput", []byte("center_pad"), 0, int32(width), 0, int32(height))
+	if err != nil {
+		return fmt.Errorf("failed to create touchpad: %v", err)
+	}
+	defer touch.Close()
+	return touch.MoveTo(int32(centerX), int32(centerY))
 }
 
 func (m *WaylandMouse) Close() error {

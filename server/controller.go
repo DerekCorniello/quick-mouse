@@ -42,6 +42,8 @@ type PacketController struct {
 	sumRotGamma      float64
 	calibrationCount int
 
+	calibrationStarted bool
+
 	verbose bool
 }
 
@@ -54,21 +56,22 @@ func NewPacketController(verbose bool) (*PacketController, error) {
 	}
 
 	controller := &PacketController{
-		mouse:            mouse,
-		sensitivity:      3.0,
-		friction:         0.98,
-		maxVelocity:      150.0,
-		rotDeadzone:      0.1,
-		stopPhysics:      make(chan struct{}),
-		lastUpdate:       time.Now(),
-		baselineRotAlpha: 0.0,
-		baselineRotBeta:  0.0,
-		baselineRotGamma: 0.0,
-		sumRotAlpha:      0.0,
-		sumRotBeta:       0.0,
-		sumRotGamma:      0.0,
-		calibrationCount: 0,
-		verbose:          verbose,
+		mouse:              mouse,
+		sensitivity:        3.0,
+		friction:           0.98,
+		maxVelocity:        150.0,
+		rotDeadzone:        0.1,
+		stopPhysics:        make(chan struct{}),
+		lastUpdate:         time.Now(),
+		baselineRotAlpha:   0.0,
+		baselineRotBeta:    0.0,
+		baselineRotGamma:   0.0,
+		sumRotAlpha:        0.0,
+		sumRotBeta:         0.0,
+		sumRotGamma:        0.0,
+		calibrationCount:   0,
+		calibrationStarted: false,
+		verbose:            verbose,
 	}
 
 	controller.startPhysicsLoop()
@@ -214,6 +217,10 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case Calibration:
 		p := packet.(*CalibrationPacket)
+		if !c.calibrationStarted {
+			c.centerMouseForCalibration()
+			c.calibrationStarted = true
+		}
 		c.sumRotAlpha += p.RotAlpha
 		c.sumRotBeta += p.RotBeta
 		c.sumRotGamma += p.RotGamma
@@ -234,10 +241,20 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		c.sumRotBeta = 0.0
 		c.sumRotGamma = 0.0
 		c.calibrationCount = 0
+		c.calibrationStarted = false
 		return nil
 
 	default:
 		return fmt.Errorf("unknown packet type: %s", packet.Type())
+	}
+}
+
+func (c *PacketController) centerMouseForCalibration() {
+	err := c.mouse.CenterOnMainDisplay()
+	if err != nil {
+		c.logIfEnabled("Failed to center mouse for calibration: %v", err)
+	} else {
+		c.logIfEnabled("Centered mouse on main display for calibration")
 	}
 }
 
