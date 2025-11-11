@@ -1,155 +1,200 @@
 @echo off
-REM Installation script for quick-mouse on Windows
-REM This script clones the repo, installs dependencies, builds the project, and generates HTTPS certificates
+setlocal enabledelayedexpansion
+
+:: ===================================================================
+:: quick-mouse Installer for Windows
+:: Supports: winget (preferred), choco (fallback)
+:: Auto-refreshes PATH after installing tools
+:: ===================================================================
 
 echo Installing quick-mouse...
 
-REM Check if running on Windows
-if "%OS%" neq "Windows_NT" (
-    echo Error: This script is for Windows. Use setup.sh on Linux/macOS.
-    exit /b 1
-)
-
-REM Clone the repo if not already in it
-if not exist go.mod (
+:: ---------- Clone Repository ----------
+if not exist quick-mouse\go.mod (
     echo Cloning quick-mouse repository...
-    git clone https://github.com/DerekCorniello/quick-mouse.git .
-    if %errorlevel% neq 0 (
-        echo Error: Failed to clone repository.
+    git clone https://github.com/DerekCorniello/quick-mouse.git
+    if errorlevel 1 (
+        echo [ERROR] Failed to clone repository.
         exit /b 1
     )
 )
 
-REM Function to install packages using winget or choco
-:install_package
-setlocal
-set PACKAGE=%1
-set CHECK_CMD=%PACKAGE%
-set INSTALL_NAME=%PACKAGE%
-REM Adjust for Windows naming
-if "%PACKAGE%"=="nodejs" (
-    set CHECK_CMD=node
-    set INSTALL_NAME=nodejs
+cd quick-mouse || (
+    echo [ERROR] Failed to enter quick-mouse directory.
+    exit /b 1
 )
+
+:: ---------- Install Required Tools ----------
+call :install_package go GoLang.Go go
+call :install_package nodejs OpenJS.NodeJS node
+call :install_package openssl FireDaemon.OpenSSL openssl
+
+:: ---------- Go Backend Build ----------
+echo.
+echo Installing Go dependencies...
+go mod tidy
+if errorlevel 1 (
+    echo [ERROR] Failed to tidy Go modules.
+    exit /b 1
+)
+
+echo Building Go executable...
+go build -o quick-mouse.exe
+if errorlevel 1 (
+    echo [ERROR] Failed to build quick-mouse.exe
+    exit /b 1
+)
+
+:: ---------- Client Build ----------
+echo.
+echo Building client (Node.js)...
+if not exist client\package.json (
+    echo [ERROR] client/package.json not found. Is the repo cloned correctly?
+    exit /b 1
+)
+
+cd client
+call npm install
+if errorlevel 1 (
+    echo [ERROR] npm install failed.
+    exit /b 1
+)
+
+call npm run build
+if errorlevel 1 (
+    echo [ERROR] npm run build failed.
+    exit /b 1
+)
+cd ..
+
+:: ---------- Certificate Generation ----------
+echo.
+if not exist certs mkdir certs
+
+:: Check OpenSSL with full path fallback
+set "OPENSSL_CMD=openssl"
+where openssl >nul 2>nul
+if errorlevel 1 (
+    :: Try common FireDaemon install path
+    set "FD_PATH=%ProgramFiles%\FireDaemon OpenSSL"
+    if exist "!FD_PATH!" (
+        for /d %%d in ("!FD_PATH!\*") do (
+            if exist "%%d\bin\openssl.exe" (
+                set "OPENSSL_CMD=%%d\bin\openssl.exe"
+                set "PATH=!PATH!;%%d\bin"
+                goto :openssl_found
+            )
+        )
+    )
+    echo [ERROR] OpenSSL not found in PATH or default install location.
+    echo         Install via: winget install FireDaemon.OpenSSL
+    exit /b 1
+)
+
+:openssl_found
+echo Generating TLS certificate for localhost...
+"%OPENSSL_CMD%" req -x509 -newkey rsa:4096 ^
+    -keyout certs\localhost-key.pem ^
+    -out certs\localhost.pem ^
+    -days 365 -nodes ^
+    -subj "/CN=localhost"
+if errorlevel 1 (
+    echo [ERROR] Certificate generation failed.
+    exit /b 1
+)
+
+:: ---------- Success ----------
+echo.
+echo ========================================
+echo Installation completed successfully!
+echo ========================================
+echo.
+echo Executable: quick-mouse.exe
+echo Client:     client/dist/ (or client/build/)
+echo Certs:      certs\localhost.pem
+echo             certs\localhost-key.pem
+echo.
+echo Run: quick-mouse.exe
+echo.
+pause
+exit /b 0
+
+:: ===================================================================
+:: :install_package <name> <winget-id> <check-cmd>
+:: Installs package using winget (preferred) or choco (fallback)
+:: Auto-refreshes PATH after install
+:: ===================================================================
+:install_package
+set "PKG_NAME=%~1"
+set "WINGET_ID=%~2"
+set "CHECK_CMD=%~3"
+
+echo Checking for %PKG_NAME%...
+
 where %CHECK_CMD% >nul 2>nul
-if %errorlevel% equ 0 (
-    echo %PACKAGE% is already installed.
-) else (
-    echo %PACKAGE% not found. Installing %INSTALL_NAME%...
-    REM Try winget first
-    where winget >nul 2>nul
-    if %errorlevel% equ 0 (
-        if "%PACKAGE%"=="go" (
-            winget install GoLang.Go
-        ) else if "%PACKAGE%"=="nodejs" (
-            winget install Microsoft.NodeJS
-        ) else (
-            winget install %INSTALL_NAME%
-        )
-    ) else (
-        REM Try choco
-        where choco >nul 2>nul
-        if %errorlevel% equ 0 (
-            choco install %INSTALL_NAME% -y
-        ) else (
-            echo Please install %PACKAGE% manually from https://golang.org/dl/ or https://nodejs.org/
-            exit /b 1
-        )
+if not errorlevel 1 (
+    echo   [OK] %PKG_NAME% is already installed.
+    goto :eof
+)
+
+echo   [INSTALL] Installing %PKG_NAME%...
+
+:: Try winget
+where winget >nul 2>nul
+if not errorlevel 1 (
+    echo     Using winget...
+    winget install --id %WINGET_ID% --silent --accept-package-agreements --accept-source-agreements
+    if errorlevel 1 (
+        echo     [WARN] winget install failed, trying choco...
+        goto :try_choco
+    )
+
+    :: Auto-refresh PATH for common tools
+    if /i "%PKG_NAME%"=="go" (
+        set "PATH=%PATH%;%ProgramFiles%\Go\bin"
+    )
+    if /i "%PKG_NAME%"=="nodejs" (
+        set "PATH=%PATH%;%ProgramFiles%\nodejs"
+    )
+    if /i "%PKG_NAME%"=="openssl" (
+        call :refresh_openssl_path
+    )
+    echo   [OK] %PKG_NAME% installed via winget.
+    goto :eof
+)
+
+:try_choco
+:: Try Chocolatey
+where choco >nul 2>nul
+if not errorlevel 1 (
+    echo     Using Chocolatey...
+    choco install %PKG_NAME% -y
+    if errorlevel 1 (
+        echo [ERROR] Failed to install %PKG_NAME% with both winget and choco.
+        echo         Please install manually: https://go.dev/dl/, https://nodejs.org, https://slproweb.com/products/Win32OpenSSL.html
+        exit /b 1
+    )
+    echo   [OK] %PKG_NAME% installed via choco.
+    goto :eof
+)
+
+echo [ERROR] Neither winget nor choco is available.
+echo         Please install %PKG_NAME% manually.
+exit /b 1
+
+:: ===================================================================
+:: :refresh_openssl_path
+:: Finds FireDaemon OpenSSL install and adds to PATH
+:: ===================================================================
+:refresh_openssl_path
+set "FD_BASE=%ProgramFiles%\FireDaemon OpenSSL"
+if not exist "!FD_BASE!" goto :eof
+
+for /d %%d in ("!FD_BASE!\*") do (
+    if exist "%%d\bin\openssl.exe" (
+        set "PATH=!PATH!;%%d\bin"
+        echo     Added OpenSSL to PATH: %%d\bin
+        goto :eof
     )
 )
 goto :eof
-
-REM Install Go
-call :install_package go
-
-REM Install Node.js
-call :install_package nodejs
-
-REM Install OpenSSL (might need manual install)
-where openssl >nul 2>nul
-if %errorlevel% neq 0 (
-    echo OpenSSL not found. Please install from https://slproweb.com/products/Win32OpenSSL.html
-    REM Try to install with choco if available
-    where choco >nul 2>nul
-    if %errorlevel% equ 0 (
-        choco install openssl -y
-    ) else (
-        echo Please install OpenSSL manually.
-        exit /b 1
-    )
-)
-
-REM Install Go dependencies
-echo Installing Go dependencies...
-go mod tidy
-
-REM Build the Go executable
-echo Building the Go executable...
-go build -o quick-mouse
-
-REM Build the client
-echo Building the client...
-cd client
-call npm install
-call npm run build
-cd ..
-
-REM Create certs directory if it doesn't exist
-if not exist certs mkdir certs
-
-REM Generate self-signed certificate for localhost
-echo Generating self-signed certificate for localhost...
-openssl req -x509 -newkey rsa:4096 -keyout certs\localhost-key.pem -out certs\localhost.pem -days 365 -nodes -subj "/CN=localhost"
-
-if %errorlevel% equ 0 (
-    echo Installation completed successfully!
-    echo Files created:
-    echo   - quick-mouse.exe (executable)
-    echo   - certs\localhost.pem
-    echo   - certs\localhost-key.pem
-    echo.
-    echo You can now run the server with: quick-mouse.exe
-) else (
-    echo Error: Failed to generate certificates.
-    exit /b 1
-)
-
-REM Create certs directory if it doesn't exist
-if not exist certs mkdir certs
-
-REM Try to use OpenSSL if available
-where openssl >nul 2>nul
-if %errorlevel% equ 0 (
-    echo Generating self-signed certificate for localhost using OpenSSL...
-    openssl req -x509 -newkey rsa:4096 -keyout certs\localhost-key.pem -out certs\localhost.pem -days 365 -nodes -subj "/CN=localhost"
-    if %errorlevel% equ 0 (
-        echo Certificates generated successfully!
-        echo Files created:
-        echo   - certs\localhost.pem
-        echo   - certs\localhost-key.pem
-        echo.
-        echo You can now run the server with: go run main.go
-        goto :eof
-    ) else (
-        echo Error: Failed to generate certificates with OpenSSL.
-    )
-)
-
-REM Fallback to PowerShell
-echo OpenSSL not found. Using PowerShell to generate certificate...
-powershell -Command "& { $cert = New-SelfSignedCertificate -DnsName 'localhost' -CertStoreLocation 'cert:\LocalMachine\My' -KeyExportPolicy Exportable -NotAfter (Get-Date).AddDays(365); $pwd = ConvertTo-SecureString -String 'password' -Force -AsPlainText; Export-PfxCertificate -Cert $cert -FilePath 'certs\localhost.pfx' -Password $pwd; $cert | Export-Certificate -FilePath 'certs\localhost.crt'; }"
-
-if %errorlevel% equ 0 (
-    REM Convert PFX to PEM format if needed (simplified)
-    echo Certificates generated successfully using PowerShell!
-    echo Files created:
-    echo   - certs\localhost.crt (certificate)
-    echo   - certs\localhost.pfx (with private key)
-    echo.
-    echo Note: You may need to convert .pfx to .pem if required by the server.
-    echo You can now run the server with: go run main.go
-) else (
-    echo Error: Failed to generate certificates.
-    echo Please install OpenSSL from https://slproweb.com/products/Win32OpenSSL.html and try again.
-    exit /b 1
-)
