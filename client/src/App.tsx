@@ -29,21 +29,27 @@ export default function App() {
   const [calibrationStarted, setCalibrationStarted] = useState(false);
   const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
-  const [pointerSensitivity, setPointerSensitivity] = useState(5);
-  const [scrollSensitivity, setScrollSensitivity] = useState(5);
-  const pointerSensitivityRef = useRef(5);
-  const scrollSensitivityRef = useRef(5);
+   const [pointerSensitivity, setPointerSensitivity] = useState(5);
+   const [handheldSensitivity, setHandheldSensitivity] = useState(5);
+   const [scrollSensitivity, setScrollSensitivity] = useState(5);
+   const pointerSensitivityRef = useRef(5);
+   const handheldSensitivityRef = useRef(5);
+   const scrollSensitivityRef = useRef(5);
   const scrollAccumulatorRef = useRef({ x: 0, y: 0 });
   const rafIdRef = useRef<number | null>(null);
 
-  // Keep refs in sync with state
-  useEffect(() => {
-    pointerSensitivityRef.current = pointerSensitivity;
-  }, [pointerSensitivity]);
+   // Keep refs in sync with state
+   useEffect(() => {
+     pointerSensitivityRef.current = pointerSensitivity;
+   }, [pointerSensitivity]);
 
-  useEffect(() => {
-    scrollSensitivityRef.current = scrollSensitivity;
-  }, [scrollSensitivity]);
+   useEffect(() => {
+     handheldSensitivityRef.current = handheldSensitivity;
+   }, [handheldSensitivity]);
+
+   useEffect(() => {
+     scrollSensitivityRef.current = scrollSensitivity;
+   }, [scrollSensitivity]);
 
   const handlePause = useCallback(() => {
     isPausedRef.current = true;
@@ -277,7 +283,7 @@ export default function App() {
           rot_beta: rotBeta,
           rot_gamma: rotGamma,
           timestamp: Date.now(),
-          pointerSensitivity: pointerSensitivityRef.current,
+          handheldSensitivity: handheldSensitivityRef.current,
         });
       }
     },
@@ -388,11 +394,13 @@ export default function App() {
 
   return (
     <div>
-      <Header
-        pointerSensitivity={pointerSensitivity}
-        onPointerSensitivityChange={setPointerSensitivity}
-        scrollSensitivity={scrollSensitivity}
-        onScrollSensitivityChange={setScrollSensitivity}
+       <Header
+         pointerSensitivity={pointerSensitivity}
+         onPointerSensitivityChange={setPointerSensitivity}
+         handheldSensitivity={handheldSensitivity}
+         onHandheldSensitivityChange={setHandheldSensitivity}
+         scrollSensitivity={scrollSensitivity}
+         onScrollSensitivityChange={setScrollSensitivity}
         showSensorLog={showSensorLog}
         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
         buttonsAboveTouchpad={buttonsAboveTouchpad}

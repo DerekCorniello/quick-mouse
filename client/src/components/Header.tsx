@@ -15,10 +15,12 @@ import PauseModal from "./PauseModal";
 import PauseIcon from "@mui/icons-material/Pause";
 
 interface HeaderProps {
-  pointerSensitivity: number;
-  scrollSensitivity: number;
-  onPointerSensitivityChange: (value: number) => void;
-  onScrollSensitivityChange: (value: number) => void;
+   pointerSensitivity: number;
+   handheldSensitivity: number;
+   scrollSensitivity: number;
+   onPointerSensitivityChange: (value: number) => void;
+   onHandheldSensitivityChange: (value: number) => void;
+   onScrollSensitivityChange: (value: number) => void;
   showSensorLog: boolean;
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
@@ -33,10 +35,12 @@ interface HeaderProps {
 }
 
 export function Header({
-  pointerSensitivity,
-  scrollSensitivity,
-  onPointerSensitivityChange,
-  onScrollSensitivityChange,
+   pointerSensitivity,
+   handheldSensitivity,
+   scrollSensitivity,
+   onPointerSensitivityChange,
+   onHandheldSensitivityChange,
+   onScrollSensitivityChange,
   showSensorLog,
   onToggleSensorLog,
   buttonsAboveTouchpad,
@@ -114,12 +118,14 @@ export function Header({
           <SettingsIcon />
         </IconButton>
         <SettingsModal
-          open={settingsOpen}
-          onClose={handleSettingsClose}
-          pointerSensitivity={pointerSensitivity}
-          scrollSensitivity={scrollSensitivity}
-          onPointerSensitivityChange={onPointerSensitivityChange}
-          onScrollSensitivityChange={onScrollSensitivityChange}
+           open={settingsOpen}
+           onClose={handleSettingsClose}
+           pointerSensitivity={pointerSensitivity}
+           handheldSensitivity={handheldSensitivity}
+           scrollSensitivity={scrollSensitivity}
+           onPointerSensitivityChange={onPointerSensitivityChange}
+           onHandheldSensitivityChange={onHandheldSensitivityChange}
+           onScrollSensitivityChange={onScrollSensitivityChange}
           showSensorLog={showSensorLog}
           onToggleSensorLog={onToggleSensorLog}
           buttonsAboveTouchpad={buttonsAboveTouchpad}

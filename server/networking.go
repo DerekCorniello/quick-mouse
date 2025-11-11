@@ -79,11 +79,11 @@ func (p MouseMovePacket) Type() PacketType {
 }
 
 type DeviceMotionPacket struct {
-	RotAlpha           float64 `json:"rot_alpha"`
-	RotBeta            float64 `json:"rot_beta"`
-	RotGamma           float64 `json:"rot_gamma"`
-	Timestamp          int64   `json:"timestamp"`
-	PointerSensitivity float64 `json:"pointerSensitivity"`
+	RotAlpha            float64 `json:"rot_alpha"`
+	RotBeta             float64 `json:"rot_beta"`
+	RotGamma            float64 `json:"rot_gamma"`
+	Timestamp           int64   `json:"timestamp"`
+	HandheldSensitivity float64 `json:"handheldSensitivity"`
 }
 
 func (p DeviceMotionPacket) Type() PacketType {

@@ -16,9 +16,8 @@ export function SensitivityControl({
   return (
     <Box
       sx={{
-        p: 2,
+        p: 0,
         borderRadius: 3,
-        border: 1,
         borderColor: "divider",
         bgcolor: "transparent",
       }}
@@ -28,7 +27,7 @@ export function SensitivityControl({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          mb: 1,
+          mb: 0,
         }}
       >
         <Typography variant="body2" color="text.secondary">

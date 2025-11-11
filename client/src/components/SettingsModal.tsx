@@ -6,12 +6,14 @@ import CloseIcon from "@mui/icons-material/Close";
 import { SensitivityControl } from "./SensitivityControl";
 
 interface SettingsModalProps {
-  open: boolean;
-  onClose: () => void;
-  pointerSensitivity: number;
-  scrollSensitivity: number;
-  onPointerSensitivityChange: (value: number) => void;
-  onScrollSensitivityChange: (value: number) => void;
+   open: boolean;
+   onClose: () => void;
+   pointerSensitivity: number;
+   handheldSensitivity: number;
+   scrollSensitivity: number;
+   onPointerSensitivityChange: (value: number) => void;
+   onHandheldSensitivityChange: (value: number) => void;
+   onScrollSensitivityChange: (value: number) => void;
   showSensorLog: boolean;
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
@@ -23,12 +25,14 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({
-  open,
-  onClose,
-  pointerSensitivity,
-  scrollSensitivity,
-  onPointerSensitivityChange,
-  onScrollSensitivityChange,
+   open,
+   onClose,
+   pointerSensitivity,
+   handheldSensitivity,
+   scrollSensitivity,
+   onPointerSensitivityChange,
+   onHandheldSensitivityChange,
+   onScrollSensitivityChange,
   showSensorLog,
   onToggleSensorLog,
   buttonsAboveTouchpad,
@@ -66,17 +70,22 @@ export default function SettingsModal({
       <Typography variant="h5" sx={{ mb: 3 }}>
         Settings
       </Typography>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        <SensitivityControl
-          title="Pointer Sensitivity"
-          sensitivity={pointerSensitivity}
-          onSensitivityChange={onPointerSensitivityChange}
-        />
-        <SensitivityControl
-          title="Scroll Sensitivity"
-          sensitivity={scrollSensitivity}
-          onSensitivityChange={onScrollSensitivityChange}
-        />
+       <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+         <SensitivityControl
+           title="Touchpad Sensitivity"
+           sensitivity={pointerSensitivity}
+           onSensitivityChange={onPointerSensitivityChange}
+         />
+         <SensitivityControl
+           title="Handheld Sensitivity"
+           sensitivity={handheldSensitivity}
+           onSensitivityChange={onHandheldSensitivityChange}
+         />
+         <SensitivityControl
+           title="Scroll Sensitivity"
+           sensitivity={scrollSensitivity}
+           onSensitivityChange={onScrollSensitivityChange}
+         />
         <Button variant="outlined" onClick={onToggleSensorLog} fullWidth>
           {showSensorLog ? "Hide Sensor Log" : "Show Sensor Log"}
         </Button>

@@ -205,7 +205,7 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 
 	case DeviceMotion:
 		p := packet.(*DeviceMotionPacket)
-		sensitivity := p.PointerSensitivity / 25.0
+		sensitivity := p.HandheldSensitivity / 5.0
 		scaledRotAlpha := p.RotAlpha * sensitivity
 		scaledRotBeta := p.RotBeta * sensitivity
 		scaledRotGamma := p.RotGamma * sensitivity
