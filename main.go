@@ -235,7 +235,7 @@ var upgrader = websocket.Upgrader{
 
 var serializer server.Serializer = server.JSONSerializer{}
 var controller *server.PacketController
-var connectedClients int
+var connectedClients bool
 var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
 var lastLog string
 var lastAction string
@@ -253,10 +253,10 @@ func updateDisplay() {
 	// clear screen and move to top
 	fmt.Print("\033[H\033[2J")
 
-	if connectedClients > 0 {
+	if connectedClients {
 		fmt.Println("Status: Device connected")
 		if *logFlag {
-			fmt.Printf("Connected clients: %d\n", connectedClients)
+			fmt.Printf("Client connected: %t\n", connectedClients)
 			fmt.Printf("Physics running: %t\n", physicsRunning)
 			fmt.Printf("Last action: %s\n", lastAction)
 			if lastLog != "" {
@@ -304,13 +304,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	connectedClients++
-	updateDisplay()
-	defer func() {
-		connectedClients--
-		updateDisplay()
-	}()
-
 	// require authentication first
 	_, message, err := conn.ReadMessage()
 	if err != nil {
@@ -355,6 +348,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	logIfEnabled("Client authenticated successfully")
 	lastAction = "auth"
+
+	connectedClients = true
+	updateDisplay()
+	defer func() {
+		connectedClients = false
+		updateDisplay()
+	}()
 
 	// start keep-alive mechanism
 	// ws connections typically timeout after 30-120 seconds of inactivity
