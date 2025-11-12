@@ -29,27 +29,27 @@ export default function App() {
   const [calibrationStarted, setCalibrationStarted] = useState(false);
   const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
-   const [pointerSensitivity, setPointerSensitivity] = useState(5);
-   const [handheldSensitivity, setHandheldSensitivity] = useState(5);
-   const [scrollSensitivity, setScrollSensitivity] = useState(5);
-   const pointerSensitivityRef = useRef(5);
-   const handheldSensitivityRef = useRef(5);
-   const scrollSensitivityRef = useRef(5);
+  const [pointerSensitivity, setPointerSensitivity] = useState(5);
+  const [handheldSensitivity, setHandheldSensitivity] = useState(5);
+  const [scrollSensitivity, setScrollSensitivity] = useState(5);
+  const pointerSensitivityRef = useRef(5);
+  const handheldSensitivityRef = useRef(5);
+  const scrollSensitivityRef = useRef(5);
   const scrollAccumulatorRef = useRef({ x: 0, y: 0 });
   const rafIdRef = useRef<number | null>(null);
 
-   // Keep refs in sync with state
-   useEffect(() => {
-     pointerSensitivityRef.current = pointerSensitivity;
-   }, [pointerSensitivity]);
+  // Keep refs in sync with state
+  useEffect(() => {
+    pointerSensitivityRef.current = pointerSensitivity;
+  }, [pointerSensitivity]);
 
-   useEffect(() => {
-     handheldSensitivityRef.current = handheldSensitivity;
-   }, [handheldSensitivity]);
+  useEffect(() => {
+    handheldSensitivityRef.current = handheldSensitivity;
+  }, [handheldSensitivity]);
 
-   useEffect(() => {
-     scrollSensitivityRef.current = scrollSensitivity;
-   }, [scrollSensitivity]);
+  useEffect(() => {
+    scrollSensitivityRef.current = scrollSensitivity;
+  }, [scrollSensitivity]);
 
   const handlePause = useCallback(() => {
     isPausedRef.current = true;
@@ -378,29 +378,15 @@ export default function App() {
     }
   }, [calibrationComplete]);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   return (
     <div>
-       <Header
-         pointerSensitivity={pointerSensitivity}
-         onPointerSensitivityChange={setPointerSensitivity}
-         handheldSensitivity={handheldSensitivity}
-         onHandheldSensitivityChange={setHandheldSensitivity}
-         scrollSensitivity={scrollSensitivity}
-         onScrollSensitivityChange={setScrollSensitivity}
+      <Header
+        pointerSensitivity={pointerSensitivity}
+        onPointerSensitivityChange={setPointerSensitivity}
+        handheldSensitivity={handheldSensitivity}
+        onHandheldSensitivityChange={setHandheldSensitivity}
+        scrollSensitivity={scrollSensitivity}
+        onScrollSensitivityChange={setScrollSensitivity}
         showSensorLog={showSensorLog}
         onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
         buttonsAboveTouchpad={buttonsAboveTouchpad}
@@ -432,10 +418,38 @@ export default function App() {
             <MouseButtons
               isLeftPressed={isLeftPressed}
               isRightPressed={isRightPressed}
-              onLeftTouchStart={() => handleLeftTouchStart(appPhase, setIsLeftPressed, sendPacket, swapLeftRightClick)}
-              onLeftTouchEnd={() => handleLeftTouchEnd(appPhase, setIsLeftPressed, sendPacket, swapLeftRightClick)}
-              onRightTouchStart={() => handleRightTouchStart(appPhase, setIsRightPressed, sendPacket, swapLeftRightClick)}
-              onRightTouchEnd={() => handleRightTouchEnd(appPhase, setIsRightPressed, sendPacket, swapLeftRightClick)}
+              onLeftTouchStart={() =>
+                handleLeftTouchStart(
+                  appPhase,
+                  setIsLeftPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onLeftTouchEnd={() =>
+                handleLeftTouchEnd(
+                  appPhase,
+                  setIsLeftPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onRightTouchStart={() =>
+                handleRightTouchStart(
+                  appPhase,
+                  setIsRightPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onRightTouchEnd={() =>
+                handleRightTouchEnd(
+                  appPhase,
+                  setIsRightPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
               swapLeftRightClick={swapLeftRightClick}
             />
           </div>
@@ -455,19 +469,68 @@ export default function App() {
             touchActive={touchActive}
             isLeftPressed={isLeftPressed}
             isRightPressed={isRightPressed}
-            onTouchStart={(e) => handleTouchStart(e, appPhase, initialTouchesRef, setTouchActive)}
-            onTouchMove={(e) => handleTouchMove(e, initialTouchesRef, sendPacket, pointerSensitivityRef, scrollSensitivityRef, scrollAccumulatorRef, naturalScroll, rafIdRef)}
-            onTouchEnd={() => handleTouchEnd(initialTouchesRef, setTouchActive, setSwipeDirection, setSwipeMagnitude, rafIdRef)}
+            onTouchStart={(e) =>
+              handleTouchStart(e, appPhase, initialTouchesRef, setTouchActive)
+            }
+            onTouchMove={(e) =>
+              handleTouchMove(
+                e,
+                initialTouchesRef,
+                sendPacket,
+                pointerSensitivityRef,
+                scrollSensitivityRef,
+                scrollAccumulatorRef,
+                naturalScroll,
+                rafIdRef,
+              )
+            }
+            onTouchEnd={() =>
+              handleTouchEnd(
+                initialTouchesRef,
+                setTouchActive,
+                setSwipeDirection,
+                setSwipeMagnitude,
+                rafIdRef,
+              )
+            }
             permissionState={appPhase === "main" ? "granted" : "denied"}
           />
           {!buttonsAboveTouchpad && (
             <MouseButtons
               isLeftPressed={isLeftPressed}
               isRightPressed={isRightPressed}
-              onLeftTouchStart={() => handleLeftTouchStart(appPhase, setIsLeftPressed, sendPacket, swapLeftRightClick)}
-              onLeftTouchEnd={() => handleLeftTouchEnd(appPhase, setIsLeftPressed, sendPacket, swapLeftRightClick)}
-              onRightTouchStart={() => handleRightTouchStart(appPhase, setIsRightPressed, sendPacket, swapLeftRightClick)}
-              onRightTouchEnd={() => handleRightTouchEnd(appPhase, setIsRightPressed, sendPacket, swapLeftRightClick)}
+              onLeftTouchStart={() =>
+                handleLeftTouchStart(
+                  appPhase,
+                  setIsLeftPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onLeftTouchEnd={() =>
+                handleLeftTouchEnd(
+                  appPhase,
+                  setIsLeftPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onRightTouchStart={() =>
+                handleRightTouchStart(
+                  appPhase,
+                  setIsRightPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
+              onRightTouchEnd={() =>
+                handleRightTouchEnd(
+                  appPhase,
+                  setIsRightPressed,
+                  sendPacket,
+                  swapLeftRightClick,
+                )
+              }
               swapLeftRightClick={swapLeftRightClick}
             />
           )}
