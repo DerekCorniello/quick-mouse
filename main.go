@@ -237,6 +237,7 @@ var serializer server.Serializer = server.JSONSerializer{}
 var controller *server.PacketController
 var connectedClients bool
 var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
+var portArg = flag.Int("port", 3000, "enable logging of non-movement events")
 var lastLog string
 var lastAction string
 var physicsRunning bool
@@ -266,7 +267,7 @@ func updateDisplay() {
 		}
 	} else {
 		localIP := getLocalIP()
-		httpURL := fmt.Sprintf("https://%s:3000/?key=%s", localIP, url.QueryEscape(authKey))
+		httpURL := fmt.Sprintf("https://%s:%d/?key=%s", localIP, *portArg, url.QueryEscape(authKey))
 
 		fmt.Print("Scan this QR code to connect:\n\n")
 		qrterminal.GenerateWithConfig(httpURL, qrterminal.Config{
@@ -467,6 +468,10 @@ func generateAuthKey() string {
 func main() {
 	flag.Parse()
 
+	if *portArg < 1024 || *portArg > 65534 {
+		log.Fatal("Port number must be between 1024 and 65533")
+	}
+
 	// lets not overflow the tui
 	enterAlternateScreen()
 	defer exitAlternateScreen()
@@ -506,7 +511,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler)
 	updateDisplay()
 
-	err = http.ListenAndServeTLS(":3000", "certs/localhost.pem", "certs/localhost-key.pem", nil)
+	err = http.ListenAndServeTLS(fmt.Sprintf(":%d", *portArg), "certs/localhost.pem", "certs/localhost-key.pem", nil)
 	if err != nil {
 		log.Fatal("Error starting HTTPS server:", err)
 	}
