@@ -10,11 +10,11 @@ Quick Mouse turns your phone into a precise wireless mouse. No extra hardware. O
 
 ## Demo
 ### Video
-[<img src="https://img.youtube.com/vi/Cr0FrOouxdk/hqdefault.jpg" width="1920" height="1080"
+[<img src="https://img.youtube.com/vi/Cr0FrOouxdk/hqdefault.jpg" width="500"
 />](https://www.youtube.com/embed/Cr0FrOouxdk)
 
 ### Pictures
-![Home Page](pictures/quick_mouse_home.png)
+<img src="pictures/quick_mouse_home.png" width="300">
 
 ## Features
 
