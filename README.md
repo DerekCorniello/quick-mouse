@@ -1,4 +1,4 @@
-# Quick Mouse
+# <img src="client/public/favicon.png" width="30"> Quick Mouse
 
 ![Go Badge](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white) ![React Badge](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
