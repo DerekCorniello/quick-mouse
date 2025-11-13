@@ -19,37 +19,66 @@ export default function App() {
   const [isLeftPressed, setIsLeftPressed] = useState(false);
   const [isRightPressed, setIsRightPressed] = useState(false);
   const [touchActive, setTouchActive] = useState(false);
-  const [showSensorLog, setShowSensorLog] = useState(false);
-  const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState(true);
-  const [naturalScroll, setNaturalScroll] = useState(false);
-  const [swapLeftRightClick, setSwapLeftRightClick] = useState(false);
+  const [showSensorLog, setShowSensorLog] = useState<boolean | undefined>(undefined);
+  const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState<boolean | undefined>(undefined);
+  const [naturalScroll, setNaturalScroll] = useState<boolean | undefined>(undefined);
+  const [swapLeftRightClick, setSwapLeftRightClick] = useState<boolean | undefined>(undefined);
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const calibrationCountRef = useRef(0);
   const [calibrationStarted, setCalibrationStarted] = useState(false);
   const [calibrationComplete, setCalibrationComplete] = useState(false);
   const isPausedRef = useRef(false);
-  const [pointerSensitivity, setPointerSensitivity] = useState(5);
-  const [handheldSensitivity, setHandheldSensitivity] = useState(5);
-  const [scrollSensitivity, setScrollSensitivity] = useState(5);
-  const pointerSensitivityRef = useRef(5);
-  const handheldSensitivityRef = useRef(5);
-  const scrollSensitivityRef = useRef(5);
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  // Wait for server config - no defaults
+  const [pointerSensitivity, setPointerSensitivity] = useState<number | undefined>(undefined);
+  const [handheldSensitivity, setHandheldSensitivity] = useState<number | undefined>(undefined);
+  const [scrollSensitivity, setScrollSensitivity] = useState<number | undefined>(undefined);
+  const pointerSensitivityRef = useRef<number | undefined>(undefined);
+  const handheldSensitivityRef = useRef<number | undefined>(undefined);
+  const scrollSensitivityRef = useRef<number | undefined>(undefined);
   const scrollAccumulatorRef = useRef({ x: 0, y: 0 });
   const rafIdRef = useRef<number | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
-    pointerSensitivityRef.current = pointerSensitivity;
+    if (pointerSensitivity !== undefined) {
+      pointerSensitivityRef.current = pointerSensitivity;
+    }
   }, [pointerSensitivity]);
 
   useEffect(() => {
-    handheldSensitivityRef.current = handheldSensitivity;
+    if (handheldSensitivity !== undefined) {
+      handheldSensitivityRef.current = handheldSensitivity;
+    }
   }, [handheldSensitivity]);
 
   useEffect(() => {
-    scrollSensitivityRef.current = scrollSensitivity;
+    if (scrollSensitivity !== undefined) {
+      scrollSensitivityRef.current = scrollSensitivity;
+    }
   }, [scrollSensitivity]);
+
+  // Save config to localStorage whenever it changes
+  useEffect(() => {
+    const config = {
+      pointerSensitivity,
+      handheldSensitivity,
+      scrollSensitivity,
+      showSensorLog,
+      buttonsAboveTouchpad,
+      naturalScroll,
+      swapLeftRightClick
+    };
+    try {
+      localStorage.setItem('quickMouseConfig', JSON.stringify(config));
+    } catch (error) {
+      console.error("Error saving config to localStorage:", error);
+    }
+  }, [pointerSensitivity, handheldSensitivity, scrollSensitivity, showSensorLog, buttonsAboveTouchpad, naturalScroll, swapLeftRightClick]);
+
+
 
   const handlePause = useCallback(() => {
     isPausedRef.current = true;
@@ -123,9 +152,21 @@ export default function App() {
       if (isMountedRef.current) {
         setLastMessageTime(Date.now());
         try {
-          JSON.parse(event.data);
+          const parsedData = JSON.parse(event.data);
+
+          // Handle config sync packets
+          if (parsedData.type === 'config_sync') {
+            setPointerSensitivity(parsedData.pointerSensitivity || 5);
+            setHandheldSensitivity(parsedData.handheldSensitivity || 5);
+            setScrollSensitivity(parsedData.scrollSensitivity || 5);
+            setShowSensorLog(parsedData.showSensorLog || false);
+            setButtonsAboveTouchpad(parsedData.buttonsAboveTouchpad !== false); // Default true
+            setNaturalScroll(parsedData.naturalScroll || false);
+            setSwapLeftRightClick(parsedData.swapLeftRightClick || false);
+            setConfigLoaded(true);
+          }
         } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
+          console.error("Failed to parse WebSocket message:", error, "Raw data:", event.data);
         }
       }
     };
@@ -244,6 +285,24 @@ export default function App() {
     },
     [ws, authKey, connectWebSocket],
   );
+
+  const sendConfigUpdate = useCallback(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      const configPacket = {
+        type: 'config_update',
+        lastPort: window.location.port ? parseInt(window.location.port) : 3000,
+        pointerSensitivity,
+        handheldSensitivity,
+        scrollSensitivity,
+        showSensorLog,
+        buttonsAboveTouchpad,
+        naturalScroll,
+        swapLeftRightClick,
+      };
+
+      ws.send(JSON.stringify(configPacket));
+    }
+  }, [ws, pointerSensitivity, handheldSensitivity, scrollSensitivity, showSensorLog, buttonsAboveTouchpad, naturalScroll, swapLeftRightClick]);
 
   // Device motion handlers
   const handleDeviceOrientation = useCallback(
@@ -378,30 +437,66 @@ export default function App() {
     }
   }, [calibrationComplete]);
 
+
+
+  // Wait for config before rendering main UI
+  if (!configLoaded || !Object.values({
+      pointerSensitivity,
+      handheldSensitivity,
+      scrollSensitivity,
+      showSensorLog,
+      buttonsAboveTouchpad,
+      naturalScroll,
+      swapLeftRightClick
+          }).every(value => value !== undefined)) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        <div>{connectionStatus === "connecting" ? "Connecting..." : "Loading configuration..."}</div>
+        <div style={{ fontSize: '12px', color: '#666' }}>
+          Status: {connectionStatus} | Config loaded: {configLoaded ? 'Yes' : 'No'}
+        </div>
+        {connectionStatus === "error" && (
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            Connection failed. Please refresh the page.
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <Header
-        pointerSensitivity={pointerSensitivity}
+        pointerSensitivity={pointerSensitivity!}
         onPointerSensitivityChange={setPointerSensitivity}
-        handheldSensitivity={handheldSensitivity}
+        handheldSensitivity={handheldSensitivity!}
         onHandheldSensitivityChange={setHandheldSensitivity}
-        scrollSensitivity={scrollSensitivity}
+        scrollSensitivity={scrollSensitivity!}
         onScrollSensitivityChange={setScrollSensitivity}
-        showSensorLog={showSensorLog}
-        onToggleSensorLog={() => setShowSensorLog(!showSensorLog)}
-        buttonsAboveTouchpad={buttonsAboveTouchpad}
+        showSensorLog={showSensorLog!}
+        onToggleSensorLog={() => setShowSensorLog(!showSensorLog!)}
+        buttonsAboveTouchpad={buttonsAboveTouchpad!}
         onToggleButtonPosition={() =>
-          setButtonsAboveTouchpad(!buttonsAboveTouchpad)
+          setButtonsAboveTouchpad(!buttonsAboveTouchpad!)
         }
-        naturalScroll={naturalScroll}
-        onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll)}
+        naturalScroll={naturalScroll!}
+        onToggleNaturalScroll={() => setNaturalScroll(!naturalScroll!)}
         onToggleSwapLeftRightClick={() =>
-          setSwapLeftRightClick(!swapLeftRightClick)
+          setSwapLeftRightClick(!swapLeftRightClick!)
         }
         connectionStatus={connectionStatus}
         onPause={handlePause}
         onResume={handleResume}
         onRecalibrate={handleRecalibrate}
+        onConfigUpdate={sendConfigUpdate}
       />
 
       <main

@@ -15,12 +15,12 @@ import PauseModal from "./PauseModal";
 import PauseIcon from "@mui/icons-material/Pause";
 
 interface HeaderProps {
-   pointerSensitivity: number;
-   handheldSensitivity: number;
-   scrollSensitivity: number;
-   onPointerSensitivityChange: (value: number) => void;
-   onHandheldSensitivityChange: (value: number) => void;
-   onScrollSensitivityChange: (value: number) => void;
+  pointerSensitivity: number | undefined;
+  handheldSensitivity: number | undefined;
+  scrollSensitivity: number | undefined;
+  onPointerSensitivityChange: (value: number) => void;
+  onHandheldSensitivityChange: (value: number) => void;
+  onScrollSensitivityChange: (value: number) => void;
   showSensorLog: boolean;
   onToggleSensorLog: () => void;
   buttonsAboveTouchpad: boolean;
@@ -32,6 +32,7 @@ interface HeaderProps {
   onPause: () => void;
   onResume: () => void;
   onRecalibrate: () => void;
+  onConfigUpdate: () => void;
 }
 
 export function Header({
@@ -41,17 +42,18 @@ export function Header({
    onPointerSensitivityChange,
    onHandheldSensitivityChange,
    onScrollSensitivityChange,
-  showSensorLog,
-  onToggleSensorLog,
-  buttonsAboveTouchpad,
-  onToggleButtonPosition,
-  naturalScroll,
-  onToggleNaturalScroll,
-  onToggleSwapLeftRightClick,
-  connectionStatus,
-  onPause,
-  onResume,
-  onRecalibrate,
+   showSensorLog,
+   onToggleSensorLog,
+   buttonsAboveTouchpad,
+   onToggleButtonPosition,
+   naturalScroll,
+   onToggleNaturalScroll,
+   onToggleSwapLeftRightClick,
+   connectionStatus,
+   onPause,
+   onResume,
+   onRecalibrate,
+   onConfigUpdate,
 }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -62,6 +64,7 @@ export function Header({
 
   const handleSettingsClose = () => {
     setSettingsOpen(false);
+    onConfigUpdate();
   };
 
   const handlePauseOpen = () => {
@@ -118,14 +121,14 @@ export function Header({
           <SettingsIcon />
         </IconButton>
         <SettingsModal
-           open={settingsOpen}
-           onClose={handleSettingsClose}
-           pointerSensitivity={pointerSensitivity}
-           handheldSensitivity={handheldSensitivity}
-           scrollSensitivity={scrollSensitivity}
-           onPointerSensitivityChange={onPointerSensitivityChange}
-           onHandheldSensitivityChange={onHandheldSensitivityChange}
-           onScrollSensitivityChange={onScrollSensitivityChange}
+          open={settingsOpen}
+          onClose={handleSettingsClose}
+          pointerSensitivity={pointerSensitivity}
+          handheldSensitivity={handheldSensitivity}
+          scrollSensitivity={scrollSensitivity}
+          onPointerSensitivityChange={onPointerSensitivityChange}
+          onHandheldSensitivityChange={onHandheldSensitivityChange}
+          onScrollSensitivityChange={onScrollSensitivityChange}
           showSensorLog={showSensorLog}
           onToggleSensorLog={onToggleSensorLog}
           buttonsAboveTouchpad={buttonsAboveTouchpad}

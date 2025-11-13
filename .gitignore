@@ -83,3 +83,6 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Configuration file
+config.json

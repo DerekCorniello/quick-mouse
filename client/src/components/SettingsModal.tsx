@@ -57,7 +57,7 @@ export default function SettingsModal({
         bgcolor: "background.paper",
         borderRadius: 3,
         boxShadow: 3,
-        zIndex: 1000,
+         zIndex: 1100,
         minWidth: 300,
       })}
     >

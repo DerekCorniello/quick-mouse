@@ -37,6 +37,8 @@ const (
 	KeepAlive       PacketType = "keep_alive"
 	Calibration     PacketType = "calibration"
 	CalibrationDone PacketType = "calibration_done"
+	ConfigSync      PacketType = "config_sync"
+	ConfigUpdate    PacketType = "config_update"
 )
 
 // Packet registry for type reconstruction
@@ -52,6 +54,8 @@ var packetRegistry = map[PacketType]func() Packet{
 	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
 	Calibration:     func() Packet { return &CalibrationPacket{} },
 	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
+	ConfigSync:      func() Packet { return &ConfigSyncPacket{} },
+	ConfigUpdate:    func() Packet { return &ConfigUpdatePacket{} },
 }
 
 // represents a network packet that can be serialized
@@ -148,6 +152,38 @@ func (p CalibrationDonePacket) Type() PacketType {
 	return CalibrationDone
 }
 
+type ConfigSyncPacket struct {
+	PacketType           string  `json:"type"`
+	LastPort             int     `json:"lastPort"`
+	PointerSensitivity   float64 `json:"pointerSensitivity"`
+	HandheldSensitivity  float64 `json:"handheldSensitivity"`
+	ScrollSensitivity    float64 `json:"scrollSensitivity"`
+	ShowSensorLog        bool    `json:"showSensorLog"`
+	ButtonsAboveTouchpad bool    `json:"buttonsAboveTouchpad"`
+	NaturalScroll        bool    `json:"naturalScroll"`
+	SwapLeftRightClick   bool    `json:"swapLeftRightClick"`
+}
+
+func (p ConfigSyncPacket) Type() PacketType {
+	return ConfigSync
+}
+
+type ConfigUpdatePacket struct {
+	PacketType           string  `json:"type"`
+	LastPort             int     `json:"lastPort"`
+	PointerSensitivity   float64 `json:"pointerSensitivity"`
+	HandheldSensitivity  float64 `json:"handheldSensitivity"`
+	ScrollSensitivity    float64 `json:"scrollSensitivity"`
+	ShowSensorLog        bool    `json:"showSensorLog"`
+	ButtonsAboveTouchpad bool    `json:"buttonsAboveTouchpad"`
+	NaturalScroll        bool    `json:"naturalScroll"`
+	SwapLeftRightClick   bool    `json:"swapLeftRightClick"`
+}
+
+func (p ConfigUpdatePacket) Type() PacketType {
+	return ConfigUpdate
+}
+
 // this interface will handle marshaling/unmarshaling packets
 // this is how we can switch between json and binary later
 type Serializer interface {
@@ -172,16 +208,3 @@ func (s JSONSerializer) Unmarshal(data []byte, packetType PacketType) (Packet, e
 	err := json.Unmarshal(data, packet)
 	return packet, err
 }
-
-// TODO: we will do binary later as needed but here is some scaffolding
-type BinarySerializer struct{}
-
-func (s BinarySerializer) Marshal(p Packet) ([]byte, error) {
-	return nil, fmt.Errorf("binary serialization not implemented")
-}
-
-func (s BinarySerializer) Unmarshal(data []byte, packetType PacketType) (Packet, error) {
-	return nil, fmt.Errorf("binary unmarshaling not implemented")
-}
-
-// END TODO

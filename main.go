@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -19,6 +20,20 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"quick-mouse/server"
 )
+
+type Config struct {
+	LastPort             int     `json:"lastPort"`
+	PointerSensitivity   float64 `json:"pointerSensitivity"`
+	HandheldSensitivity  float64 `json:"handheldSensitivity"`
+	ScrollSensitivity    float64 `json:"scrollSensitivity"`
+	ShowSensorLog        bool    `json:"showSensorLog"`
+	ButtonsAboveTouchpad bool    `json:"buttonsAboveTouchpad"`
+	NaturalScroll        bool    `json:"naturalScroll"`
+	SwapLeftRightClick   bool    `json:"swapLeftRightClick"`
+}
+
+var appConfig Config
+var configMutex sync.RWMutex
 
 // this is how we get the ip of the pc to host correctly
 func getLocalIP() string {
@@ -34,6 +49,61 @@ func getLocalIP() string {
 		}
 	}
 	return "localhost"
+}
+
+// loadConfig loads configuration from file or creates default config
+func loadConfig() {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+
+	// defaults
+	defaultConfig := Config{
+		LastPort:             3000,
+		PointerSensitivity:   5,
+		HandheldSensitivity:  5,
+		ScrollSensitivity:    5,
+		ShowSensorLog:        false,
+		ButtonsAboveTouchpad: true,
+		NaturalScroll:        false,
+		SwapLeftRightClick:   false,
+	}
+
+	data, err := os.ReadFile("config.json")
+	if err != nil {
+		appConfig = defaultConfig
+		saveConfig()
+		return
+	}
+
+	if err := json.Unmarshal(data, &appConfig); err != nil {
+		appConfig = defaultConfig
+		saveConfig()
+	}
+}
+
+func saveConfig() {
+	data, err := json.MarshalIndent(appConfig, "", "  ")
+	if err != nil {
+		log.Printf("Error marshaling config: %v", err)
+		return
+	}
+
+	if err := os.WriteFile("config.json", data, 0644); err != nil {
+		log.Printf("Error saving config: %v", err)
+	}
+}
+
+func getConfig() Config {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return appConfig
+}
+
+func updateConfig(newConfig Config) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	appConfig = newConfig
+	saveConfig()
 }
 
 // landingPageHandler serves an HTML page with a WebSocket test client
@@ -360,6 +430,35 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	case displayUpdateChan <- struct{}{}:
 	default:
 	}
+
+	// send current configuration to client
+	config := getConfig()
+	logIfEnabled("DEBUG: Sending config_sync to client - sensitivity: %.2f, buttonsAbove: %v", config.PointerSensitivity, config.ButtonsAboveTouchpad)
+	configPacket := server.ConfigSyncPacket{
+		PacketType:           "config_sync",
+		LastPort:             config.LastPort,
+		PointerSensitivity:   config.PointerSensitivity,
+		HandheldSensitivity:  config.HandheldSensitivity,
+		ScrollSensitivity:    config.ScrollSensitivity,
+		ShowSensorLog:        config.ShowSensorLog,
+		ButtonsAboveTouchpad: config.ButtonsAboveTouchpad,
+		NaturalScroll:        config.NaturalScroll,
+		SwapLeftRightClick:   config.SwapLeftRightClick,
+	}
+	lastAction = "config sent"
+
+	response, err := serializer.Marshal(configPacket)
+	if err != nil {
+		logIfEnabled("Error marshaling config sync: %v", err)
+	} else {
+		logIfEnabled("DEBUG: Config sync packet marshaled successfully, sending to client")
+		err = conn.WriteMessage(websocket.TextMessage, response)
+		if err != nil {
+			logIfEnabled("Error sending config sync: %v", err)
+		} else {
+			logIfEnabled("DEBUG: Config sync packet sent successfully")
+		}
+	}
 	defer func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -450,6 +549,32 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		lastAction = string(packetType)
+
+		// handle config update packets specially here
+		// not adding this to the other one because it doesnt make
+		// sense to go to the controller.go switch statememt
+		if packetType == server.ConfigUpdate {
+			configPacket, ok := packet.(*server.ConfigUpdatePacket)
+			if !ok {
+				logIfEnabled("Invalid config update packet")
+				continue
+			}
+
+			newConfig := Config{
+				LastPort:             configPacket.LastPort,
+				PointerSensitivity:   configPacket.PointerSensitivity,
+				HandheldSensitivity:  configPacket.HandheldSensitivity,
+				ScrollSensitivity:    configPacket.ScrollSensitivity,
+				ShowSensorLog:        configPacket.ShowSensorLog,
+				ButtonsAboveTouchpad: configPacket.ButtonsAboveTouchpad,
+				NaturalScroll:        configPacket.NaturalScroll,
+				SwapLeftRightClick:   configPacket.SwapLeftRightClick,
+			}
+			updateConfig(newConfig)
+			logIfEnabled("Configuration updated from client")
+			continue
+		}
+
 		if err := controller.ProcessPacket(packet); err != nil {
 			logIfEnabled("Error processing packet: %v", err)
 			continue
@@ -467,6 +592,26 @@ func generateAuthKey() string {
 
 func main() {
 	flag.Parse()
+
+	loadConfig()
+	// cli flag overrides config file
+	portFlagSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "port" {
+			portFlagSet = true
+		}
+	})
+
+	if !portFlagSet {
+		config := getConfig()
+		if config.LastPort != 0 {
+			*portArg = config.LastPort
+		}
+	} else {
+		config := getConfig()
+		config.LastPort = *portArg
+		updateConfig(config)
+	}
 
 	if *portArg < 1024 || *portArg > 65534 {
 		log.Fatal("Port number must be between 1024 and 65533")
