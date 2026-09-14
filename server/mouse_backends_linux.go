@@ -10,7 +10,8 @@ import (
 )
 
 type WaylandMouse struct {
-	device uinput.Mouse
+	device   uinput.Mouse
+	keyboard uinput.Keyboard
 }
 
 func newWaylandMouse() (MouseController, error) {
@@ -23,7 +24,16 @@ func newWaylandMouse() (MouseController, error) {
 			"Then log out and back in.", err)
 	}
 
-	return &WaylandMouse{device: mouse}, nil
+	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("virtual-keyboard"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create uinput keyboard device: %v\n"+
+			"Make sure you have permissions. Run:\n"+
+			"  sudo modprobe uinput\n"+
+			"  sudo usermod -aG input $USER\n"+
+			"Then log out and back in.", err)
+	}
+
+	return &WaylandMouse{device: mouse, keyboard: keyboard}, nil
 }
 
 func (m *WaylandMouse) MoveRelative(dx, dy int32) error {
@@ -77,6 +87,52 @@ func (m *WaylandMouse) GetPosition() (int, int, error) {
 	return 0, 0, fmt.Errorf("position not available on Wayland backend")
 }
 
+// uinputKeyCode maps the logical client key names to uinput key codes.
+func uinputKeyCode(key string) (int, error) {
+	switch key {
+	case KeyVolumeUp:
+		return uinput.KeyVolumeup, nil
+	case KeyVolumeDown:
+		return uinput.KeyVolumedown, nil
+	case KeyVolumeMute:
+		return uinput.KeyMute, nil
+	default:
+		return 0, fmt.Errorf("unknown key: %s", key)
+	}
+}
+
+func (m *WaylandMouse) KeyPress(keys []string) error {
+	if len(keys) == 0 {
+		return fmt.Errorf("no keys specified")
+	}
+
+	codes := make([]int, len(keys))
+	for i, key := range keys {
+		code, err := uinputKeyCode(key)
+		if err != nil {
+			return err
+		}
+		codes[i] = code
+	}
+
+	if len(codes) == 1 {
+		return m.keyboard.KeyPress(codes[0])
+	}
+
+	// combo: hold all keys down, then release in reverse order
+	for _, code := range codes {
+		if err := m.keyboard.KeyDown(code); err != nil {
+			return err
+		}
+	}
+	for i := len(codes) - 1; i >= 0; i-- {
+		if err := m.keyboard.KeyUp(codes[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *WaylandMouse) Scroll(deltaX, deltaY int32) error {
 	// uinput Wheel takes (isVertical bool, delta int32)
 	if deltaY != 0 {
@@ -108,5 +164,8 @@ func (m *WaylandMouse) CenterOnMainDisplay() error {
 }
 
 func (m *WaylandMouse) Close() error {
-	return m.device.Close()
+	if err := m.device.Close(); err != nil {
+		return err
+	}
+	return m.keyboard.Close()
 }

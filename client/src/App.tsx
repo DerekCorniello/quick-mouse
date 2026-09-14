@@ -286,6 +286,13 @@ export default function App() {
     [ws, authKey, connectWebSocket],
   );
 
+  const handleKeyPress = useCallback(
+    (keys: string[]) => {
+      sendPacket({ type: "key_press", keys });
+    },
+    [sendPacket],
+  );
+
   const sendConfigUpdate = useCallback(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       const configPacket = {
@@ -497,6 +504,7 @@ export default function App() {
         onResume={handleResume}
         onRecalibrate={handleRecalibrate}
         onConfigUpdate={sendConfigUpdate}
+        onKeyPress={handleKeyPress}
       />
 
       <main

@@ -64,6 +64,7 @@ type MouseController interface {
 	Release(button string) error
 	GetPosition() (int, int, error)
 	Scroll(deltaX, deltaY int32) error
+	KeyPress(keys []string) error
 	CenterOnMainDisplay() error
 	Close() error
 }
@@ -133,6 +134,10 @@ func (m *UniversalMouse) GetPosition() (int, int, error) {
 
 func (m *UniversalMouse) Scroll(deltaX, deltaY int32) error {
 	return m.controller.Scroll(deltaX, deltaY)
+}
+
+func (m *UniversalMouse) KeyPress(keys []string) error {
+	return m.controller.KeyPress(keys)
 }
 
 func (m *UniversalMouse) CenterOnMainDisplay() error {
@@ -231,6 +236,53 @@ func (m *RobotgoMouse) Release(button string) error {
 func (m *RobotgoMouse) GetPosition() (int, int, error) {
 	x, y := robotgo.Location()
 	return x, y, nil
+}
+
+// robotgoKeyName maps the logical client key names to robotgo's media key names.
+func robotgoKeyName(key string) (string, error) {
+	switch key {
+	case KeyVolumeUp:
+		return "audio_vol_up", nil
+	case KeyVolumeDown:
+		return "audio_vol_down", nil
+	case KeyVolumeMute:
+		return "audio_mute", nil
+	default:
+		return "", fmt.Errorf("unknown key: %s", key)
+	}
+}
+
+func (m *RobotgoMouse) KeyPress(keys []string) error {
+	if len(keys) == 0 {
+		return fmt.Errorf("no keys specified")
+	}
+
+	names := make([]string, len(keys))
+	for i, key := range keys {
+		name, err := robotgoKeyName(key)
+		if err != nil {
+			return err
+		}
+		names[i] = name
+	}
+
+	if len(names) == 1 {
+		return robotgo.KeyTap(names[0])
+	}
+
+	// combo: hold all keys down, then release in reverse order
+	for _, name := range names {
+		if err := robotgo.KeyToggle(name, "down"); err != nil {
+			return err
+		}
+	}
+	time.Sleep(50 * time.Millisecond)
+	for i := len(names) - 1; i >= 0; i-- {
+		if err := robotgo.KeyToggle(names[i], "up"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *RobotgoMouse) Scroll(deltaX, deltaY int32) error {
