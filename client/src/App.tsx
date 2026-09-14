@@ -526,7 +526,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onLeftTouchEnd={() =>
@@ -534,7 +534,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchStart={() =>
@@ -542,7 +542,7 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchEnd={() =>
@@ -550,10 +550,10 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
-              swapLeftRightClick={swapLeftRightClick}
+              swapLeftRightClick={swapLeftRightClick!}
             />
           </div>
         )}
@@ -583,7 +583,7 @@ export default function App() {
                 pointerSensitivityRef,
                 scrollSensitivityRef,
                 scrollAccumulatorRef,
-                naturalScroll,
+                naturalScroll!,
                 rafIdRef,
               )
             }
@@ -607,7 +607,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onLeftTouchEnd={() =>
@@ -615,7 +615,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchStart={() =>
@@ -623,7 +623,7 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchEnd={() =>
@@ -631,10 +631,10 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
-              swapLeftRightClick={swapLeftRightClick}
+              swapLeftRightClick={swapLeftRightClick!}
             />
           )}
         </div>

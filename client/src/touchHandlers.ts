@@ -26,8 +26,8 @@ export const handleTouchMove = (
   e: React.TouchEvent,
   initialTouchesRef: React.MutableRefObject<{ id: number; x: number; y: number }[]>,
   sendPacket: (packet: Packet) => void,
-  pointerSensitivityRef: React.MutableRefObject<number>,
-  scrollSensitivityRef: React.MutableRefObject<number>,
+  pointerSensitivityRef: React.MutableRefObject<number | undefined>,
+  scrollSensitivityRef: React.MutableRefObject<number | undefined>,
   scrollAccumulatorRef: React.MutableRefObject<{ x: number; y: number }>,
   naturalScroll: boolean,
   rafIdRef: React.MutableRefObject<number | null>

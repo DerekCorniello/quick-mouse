@@ -18,9 +18,9 @@ import VolumeDownIcon from "@mui/icons-material/VolumeDown";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 
 interface HeaderProps {
-  pointerSensitivity: number | undefined;
-  handheldSensitivity: number | undefined;
-  scrollSensitivity: number | undefined;
+  pointerSensitivity: number;
+  handheldSensitivity: number;
+  scrollSensitivity: number;
   onPointerSensitivityChange: (value: number) => void;
   onHandheldSensitivityChange: (value: number) => void;
   onScrollSensitivityChange: (value: number) => void;
