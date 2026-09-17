@@ -16,6 +16,8 @@ import PauseIcon from "@mui/icons-material/Pause";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import VolumeDownIcon from "@mui/icons-material/VolumeDown";
 import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
+import KeyboardModal from "./KeyboardModal";
 
 interface HeaderProps {
   pointerSensitivity: number;
@@ -37,6 +39,8 @@ interface HeaderProps {
   onRecalibrate: () => void;
   onConfigUpdate: () => void;
   onKeyPress: (keys: string[]) => void;
+  onTypeChar: (char: string) => void;
+  onTypingKeyPress: (keys: string[]) => void;
 }
 
 export function Header({
@@ -59,9 +63,12 @@ export function Header({
    onRecalibrate,
    onConfigUpdate,
    onKeyPress,
+   onTypeChar,
+   onTypingKeyPress,
  }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const handleSettingsOpen = () => {
     setSettingsOpen(true);
@@ -79,6 +86,16 @@ export function Header({
 
   const handlePauseClose = () => {
     setPauseOpen(false);
+    onResume();
+  };
+
+  const handleKeyboardOpen = () => {
+    onPause();
+    setKeyboardOpen(true);
+  };
+
+  const handleKeyboardClose = () => {
+    setKeyboardOpen(false);
     onResume();
   };
 
@@ -138,6 +155,15 @@ export function Header({
         <IconButton
           edge="end"
           color="inherit"
+          aria-label="keyboard"
+          onClick={handleKeyboardOpen}
+          sx={{ mr: 1 }}
+        >
+          <KeyboardIcon />
+        </IconButton>
+        <IconButton
+          edge="end"
+          color="inherit"
           aria-label="pause"
           onClick={handlePauseOpen}
           sx={{ mr: 1 }}
@@ -171,6 +197,12 @@ export function Header({
           onRecalibrate={onRecalibrate}
         />
         <PauseModal open={pauseOpen} onClose={handlePauseClose} />
+        <KeyboardModal
+          open={keyboardOpen}
+          onClose={handleKeyboardClose}
+          onTypeChar={onTypeChar}
+          onKeyPress={onTypingKeyPress}
+        />
       </Toolbar>
     </AppBar>
   );

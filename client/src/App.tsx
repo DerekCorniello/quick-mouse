@@ -286,11 +286,43 @@ export default function App() {
     [ws, authKey, connectWebSocket],
   );
 
+  const sendTypingPacket = useCallback(
+    (packet: Packet) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          if (!packet.type) {
+            return;
+          }
+          ws.send(JSON.stringify(packet));
+        } catch (error) {
+          console.error("Failed to send typing packet:", error);
+        }
+      } else {
+        console.warn("WebSocket not ready, typing packet not sent:", packet);
+      }
+    },
+    [ws],
+  );
+
   const handleKeyPress = useCallback(
     (keys: string[]) => {
       sendPacket({ type: "key_press", keys });
     },
     [sendPacket],
+  );
+
+  const handleTypeChar = useCallback(
+    (char: string) => {
+      sendTypingPacket({ type: "text_input", text: char });
+    },
+    [sendTypingPacket],
+  );
+
+  const handleTypingKeyPress = useCallback(
+    (keys: string[]) => {
+      sendTypingPacket({ type: "key_press", keys });
+    },
+    [sendTypingPacket],
   );
 
   const sendConfigUpdate = useCallback(() => {
@@ -505,6 +537,8 @@ export default function App() {
         onRecalibrate={handleRecalibrate}
         onConfigUpdate={sendConfigUpdate}
         onKeyPress={handleKeyPress}
+        onTypeChar={handleTypeChar}
+        onTypingKeyPress={handleTypingKeyPress}
       />
 
       <main

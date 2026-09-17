@@ -35,6 +35,7 @@ const (
 	RightClickDown  PacketType = "right_click_down"
 	ScrollMove      PacketType = "scroll_move"
 	KeyPress        PacketType = "key_press"
+	TextInput       PacketType = "text_input"
 	KeepAlive       PacketType = "keep_alive"
 	Calibration     PacketType = "calibration"
 	CalibrationDone PacketType = "calibration_done"
@@ -48,6 +49,15 @@ const (
 	KeyVolumeUp   = "volume_up"
 	KeyVolumeDown = "volume_down"
 	KeyVolumeMute = "volume_mute"
+
+	KeyBackspace = "backspace"
+	KeyEnter     = "enter"
+	KeyTab       = "tab"
+	KeyEscape    = "escape"
+	KeyArrowUp   = "up"
+	KeyArrowDown = "down"
+	KeyArrowLeft = "left"
+	KeyArrowRight = "right"
 )
 
 // Packet registry for type reconstruction
@@ -61,6 +71,7 @@ var packetRegistry = map[PacketType]func() Packet{
 	RightClickDown:  func() Packet { return &RightClickDownPacket{} },
 	ScrollMove:      func() Packet { return &ScrollMovePacket{} },
 	KeyPress:        func() Packet { return &KeyPressPacket{} },
+	TextInput:       func() Packet { return &TextInputPacket{} },
 	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
 	Calibration:     func() Packet { return &CalibrationPacket{} },
 	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
@@ -122,6 +133,16 @@ type KeyPressPacket struct {
 
 func (p KeyPressPacket) Type() PacketType {
 	return KeyPress
+}
+
+// TextInputPacket sends a string of characters to be typed at the currently
+// focused text field on the computer.
+type TextInputPacket struct {
+	Text string `json:"text"`
+}
+
+func (p TextInputPacket) Type() PacketType {
+	return TextInput
 }
 
 // event packet structs, no additional data needed, these are practically signals

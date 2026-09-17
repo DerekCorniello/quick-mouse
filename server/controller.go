@@ -223,6 +223,10 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		p := packet.(*KeyPressPacket)
 		return c.mouse.KeyPress(p.Keys)
 
+	case TextInput:
+		p := packet.(*TextInputPacket)
+		return c.mouse.TypeText(p.Text)
+
 	case LeftClickUp:
 		c.logIfEnabled("Left click up")
 		return c.mouse.Release("left")

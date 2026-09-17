@@ -65,6 +65,7 @@ type MouseController interface {
 	GetPosition() (int, int, error)
 	Scroll(deltaX, deltaY int32) error
 	KeyPress(keys []string) error
+	TypeText(text string) error
 	CenterOnMainDisplay() error
 	Close() error
 }
@@ -138,6 +139,10 @@ func (m *UniversalMouse) Scroll(deltaX, deltaY int32) error {
 
 func (m *UniversalMouse) KeyPress(keys []string) error {
 	return m.controller.KeyPress(keys)
+}
+
+func (m *UniversalMouse) TypeText(text string) error {
+	return m.controller.TypeText(text)
 }
 
 func (m *UniversalMouse) CenterOnMainDisplay() error {
@@ -247,6 +252,22 @@ func robotgoKeyName(key string) (string, error) {
 		return "audio_vol_down", nil
 	case KeyVolumeMute:
 		return "audio_mute", nil
+	case KeyBackspace:
+		return "backspace", nil
+	case KeyEnter:
+		return "enter", nil
+	case KeyTab:
+		return "tab", nil
+	case KeyEscape:
+		return "esc", nil
+	case KeyArrowUp:
+		return "up", nil
+	case KeyArrowDown:
+		return "down", nil
+	case KeyArrowLeft:
+		return "left", nil
+	case KeyArrowRight:
+		return "right", nil
 	default:
 		return "", fmt.Errorf("unknown key: %s", key)
 	}
@@ -282,6 +303,13 @@ func (m *RobotgoMouse) KeyPress(keys []string) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// TypeText types a string using robotgo's Unicode-aware keyboard handler,
+// which works on X11, Windows, and macOS. Use the uinput backend on Wayland.
+func (m *RobotgoMouse) TypeText(text string) error {
+	robotgo.TypeStr(text)
 	return nil
 }
 
