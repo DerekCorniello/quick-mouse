@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 	"unicode"
 
@@ -294,6 +295,35 @@ func (m *WaylandMouse) TypeText(text string) error {
 	}
 	if len(unsupported) > 0 {
 		return fmt.Errorf("skipped %d unsupported character(s) (ASCII only on uinput): %q", len(unsupported), string(unsupported))
+	}
+	return nil
+}
+
+// SwitchWorkspace moves to the adjacent Hyprland workspace via hyprctl.
+// hyprctl discovers the running instance itself, so no env check is needed.
+func (m *WaylandMouse) SwitchWorkspace(direction string) error {
+	var step string
+	switch direction {
+	case "next":
+		step = "+1"
+	case "prev":
+		step = "-1"
+	default:
+		return fmt.Errorf("unknown workspace direction: %s", direction)
+	}
+
+	// Hyprland 0.55+ migrated hyprctl dispatch to Lua: the legacy "workspace +1"
+	// form is now a silent Lua syntax error. Try the new form first ("r" = relative,
+	// on current monitor, includes empty workspaces), then fall back to legacy
+	// syntax for pre-0.55 Hyprland.
+	expr := fmt.Sprintf("hl.dsp.focus({workspace = 'r%s'})", step)
+	cmd := exec.Command("hyprctl", "dispatch", expr)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		legacy := exec.Command("hyprctl", "dispatch", "workspace", step)
+		if lout, lerr := legacy.CombinedOutput(); lerr != nil {
+			return fmt.Errorf("hyprctl workspace switch failed: new syntax: %v (%s); legacy: %v (%s)",
+				err, strings.TrimSpace(string(out)), lerr, strings.TrimSpace(string(lout)))
+		}
 	}
 	return nil
 }

@@ -36,6 +36,7 @@ const (
 	ScrollMove      PacketType = "scroll_move"
 	KeyPress        PacketType = "key_press"
 	TextInput       PacketType = "text_input"
+	WorkspaceSwitch PacketType = "workspace_switch"
 	KeepAlive       PacketType = "keep_alive"
 	Calibration     PacketType = "calibration"
 	CalibrationDone PacketType = "calibration_done"
@@ -72,6 +73,7 @@ var packetRegistry = map[PacketType]func() Packet{
 	ScrollMove:      func() Packet { return &ScrollMovePacket{} },
 	KeyPress:        func() Packet { return &KeyPressPacket{} },
 	TextInput:       func() Packet { return &TextInputPacket{} },
+	WorkspaceSwitch: func() Packet { return &WorkspaceSwitchPacket{} },
 	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
 	Calibration:     func() Packet { return &CalibrationPacket{} },
 	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
@@ -145,6 +147,17 @@ func (p TextInputPacket) Type() PacketType {
 	return TextInput
 }
 
+// WorkspaceSwitchPacket asks the host to move to the adjacent workspace on the
+// platform-specific desktop (Hyprland workspaces, macOS Spaces, Windows
+// virtual desktops). Direction is "next" or "prev".
+type WorkspaceSwitchPacket struct {
+	Direction string `json:"direction"`
+}
+
+func (p WorkspaceSwitchPacket) Type() PacketType {
+	return WorkspaceSwitch
+}
+
 // event packet structs, no additional data needed, these are practically signals
 type LeftClickUpPacket struct{}
 
@@ -196,6 +209,7 @@ func (p CalibrationDonePacket) Type() PacketType {
 type ConfigSyncPacket struct {
 	PacketType           string  `json:"type"`
 	LastPort             int     `json:"lastPort"`
+	HostPlatform         string  `json:"hostPlatform"`
 	PointerSensitivity   float64 `json:"pointerSensitivity"`
 	HandheldSensitivity  float64 `json:"handheldSensitivity"`
 	ScrollSensitivity    float64 `json:"scrollSensitivity"`

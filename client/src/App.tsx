@@ -23,6 +23,7 @@ export default function App() {
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState<boolean | undefined>(undefined);
   const [naturalScroll, setNaturalScroll] = useState<boolean | undefined>(undefined);
   const [swapLeftRightClick, setSwapLeftRightClick] = useState<boolean | undefined>(undefined);
+  const [hostPlatform, setHostPlatform] = useState<string>("");
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const calibrationCountRef = useRef(0);
@@ -163,6 +164,7 @@ export default function App() {
             setButtonsAboveTouchpad(parsedData.buttonsAboveTouchpad !== false); // Default true
             setNaturalScroll(parsedData.naturalScroll || false);
             setSwapLeftRightClick(parsedData.swapLeftRightClick || false);
+            setHostPlatform(parsedData.hostPlatform || "");
             setConfigLoaded(true);
           }
         } catch (error) {
@@ -323,6 +325,13 @@ export default function App() {
       sendTypingPacket({ type: "key_press", keys });
     },
     [sendTypingPacket],
+  );
+
+  const handleSwitchWorkspace = useCallback(
+    (direction: string) => {
+      sendPacket({ type: "workspace_switch", direction });
+    },
+    [sendPacket],
   );
 
   const sendConfigUpdate = useCallback(() => {
@@ -493,7 +502,7 @@ export default function App() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
+        height: '100dvh',
         fontSize: '18px',
         flexDirection: 'column',
         gap: '16px'
@@ -539,13 +548,16 @@ export default function App() {
         onKeyPress={handleKeyPress}
         onTypeChar={handleTypeChar}
         onTypingKeyPress={handleTypingKeyPress}
+        hostPlatform={hostPlatform}
+        onSwitchWorkspace={handleSwitchWorkspace}
       />
 
       <main
         style={{
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100dvh",
+          overflow: "hidden",
           gap: 4,
           position: "relative",
         }}

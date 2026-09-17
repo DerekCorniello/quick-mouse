@@ -66,6 +66,7 @@ type MouseController interface {
 	Scroll(deltaX, deltaY int32) error
 	KeyPress(keys []string) error
 	TypeText(text string) error
+	SwitchWorkspace(direction string) error
 	CenterOnMainDisplay() error
 	Close() error
 }
@@ -143,6 +144,10 @@ func (m *UniversalMouse) KeyPress(keys []string) error {
 
 func (m *UniversalMouse) TypeText(text string) error {
 	return m.controller.TypeText(text)
+}
+
+func (m *UniversalMouse) SwitchWorkspace(direction string) error {
+	return m.controller.SwitchWorkspace(direction)
 }
 
 func (m *UniversalMouse) CenterOnMainDisplay() error {
@@ -311,6 +316,26 @@ func (m *RobotgoMouse) KeyPress(keys []string) error {
 func (m *RobotgoMouse) TypeText(text string) error {
 	robotgo.TypeStr(text)
 	return nil
+}
+
+// SwitchWorkspace moves to the adjacent desktop/space on macOS (Ctrl+arrow)
+// and Windows (Ctrl+Win+arrow). Other platforms are unsupported.
+func (m *RobotgoMouse) SwitchWorkspace(direction string) error {
+	key := "right"
+	if direction == "prev" {
+		key = "left"
+	} else if direction != "next" {
+		return fmt.Errorf("unknown workspace direction: %s", direction)
+	}
+
+	switch DetectDisplayServer() {
+	case MacOS:
+		return robotgo.KeyTap(key, "ctrl")
+	case Windows:
+		return robotgo.KeyTap(key, "ctrl", "cmd")
+	default:
+		return fmt.Errorf("workspace switching not supported on this platform")
+	}
 }
 
 func (m *RobotgoMouse) Scroll(deltaX, deltaY int32) error {
