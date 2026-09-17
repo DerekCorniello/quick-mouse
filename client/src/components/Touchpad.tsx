@@ -35,7 +35,7 @@ export function Touchpad({
         position: "relative",
         flex: 1,
         minHeight: 200,
-        maxHeight: "calc(100vh - 350px)",
+        maxHeight: "calc(100dvh - 350px)",
         borderRadius: 3,
         border: 1,
         borderColor: theme.palette.primary.main,
