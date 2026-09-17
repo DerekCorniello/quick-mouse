@@ -34,11 +34,20 @@ const (
 	LeftClickDown   PacketType = "left_click_down"
 	RightClickDown  PacketType = "right_click_down"
 	ScrollMove      PacketType = "scroll_move"
+	KeyPress        PacketType = "key_press"
 	KeepAlive       PacketType = "keep_alive"
 	Calibration     PacketType = "calibration"
 	CalibrationDone PacketType = "calibration_done"
 	ConfigSync      PacketType = "config_sync"
 	ConfigUpdate    PacketType = "config_update"
+)
+
+// logical key names sent by the client; each backend maps these to its
+// platform key events. future keybindings can reuse the same names.
+const (
+	KeyVolumeUp   = "volume_up"
+	KeyVolumeDown = "volume_down"
+	KeyVolumeMute = "volume_mute"
 )
 
 // Packet registry for type reconstruction
@@ -51,6 +60,7 @@ var packetRegistry = map[PacketType]func() Packet{
 	LeftClickDown:   func() Packet { return &LeftClickDownPacket{} },
 	RightClickDown:  func() Packet { return &RightClickDownPacket{} },
 	ScrollMove:      func() Packet { return &ScrollMovePacket{} },
+	KeyPress:        func() Packet { return &KeyPressPacket{} },
 	KeepAlive:       func() Packet { return &KeepAlivePacket{} },
 	Calibration:     func() Packet { return &CalibrationPacket{} },
 	CalibrationDone: func() Packet { return &CalibrationDonePacket{} },
@@ -102,6 +112,16 @@ type ScrollMovePacket struct {
 
 func (p ScrollMovePacket) Type() PacketType {
 	return ScrollMove
+}
+
+// KeyPressPacket sends one or more logical keys (e.g. volume_up), all pressed
+// together so combos work as keybindings. See the Key* consts above.
+type KeyPressPacket struct {
+	Keys []string `json:"keys"`
+}
+
+func (p KeyPressPacket) Type() PacketType {
+	return KeyPress
 }
 
 // event packet structs, no additional data needed, these are practically signals

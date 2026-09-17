@@ -286,6 +286,13 @@ export default function App() {
     [ws, authKey, connectWebSocket],
   );
 
+  const handleKeyPress = useCallback(
+    (keys: string[]) => {
+      sendPacket({ type: "key_press", keys });
+    },
+    [sendPacket],
+  );
+
   const sendConfigUpdate = useCallback(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       const configPacket = {
@@ -497,6 +504,7 @@ export default function App() {
         onResume={handleResume}
         onRecalibrate={handleRecalibrate}
         onConfigUpdate={sendConfigUpdate}
+        onKeyPress={handleKeyPress}
       />
 
       <main
@@ -518,7 +526,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onLeftTouchEnd={() =>
@@ -526,7 +534,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchStart={() =>
@@ -534,7 +542,7 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchEnd={() =>
@@ -542,10 +550,10 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
-              swapLeftRightClick={swapLeftRightClick}
+              swapLeftRightClick={swapLeftRightClick!}
             />
           </div>
         )}
@@ -575,7 +583,7 @@ export default function App() {
                 pointerSensitivityRef,
                 scrollSensitivityRef,
                 scrollAccumulatorRef,
-                naturalScroll,
+                naturalScroll!,
                 rafIdRef,
               )
             }
@@ -599,7 +607,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onLeftTouchEnd={() =>
@@ -607,7 +615,7 @@ export default function App() {
                   appPhase,
                   setIsLeftPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchStart={() =>
@@ -615,7 +623,7 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
               onRightTouchEnd={() =>
@@ -623,10 +631,10 @@ export default function App() {
                   appPhase,
                   setIsRightPressed,
                   sendPacket,
-                  swapLeftRightClick,
+                  swapLeftRightClick!,
                 )
               }
-              swapLeftRightClick={swapLeftRightClick}
+              swapLeftRightClick={swapLeftRightClick!}
             />
           )}
         </div>

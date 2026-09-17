@@ -13,11 +13,14 @@ import Box from "@mui/material/Box";
 import SettingsModal from "./SettingsModal";
 import PauseModal from "./PauseModal";
 import PauseIcon from "@mui/icons-material/Pause";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeDownIcon from "@mui/icons-material/VolumeDown";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 
 interface HeaderProps {
-  pointerSensitivity: number | undefined;
-  handheldSensitivity: number | undefined;
-  scrollSensitivity: number | undefined;
+  pointerSensitivity: number;
+  handheldSensitivity: number;
+  scrollSensitivity: number;
   onPointerSensitivityChange: (value: number) => void;
   onHandheldSensitivityChange: (value: number) => void;
   onScrollSensitivityChange: (value: number) => void;
@@ -33,6 +36,7 @@ interface HeaderProps {
   onResume: () => void;
   onRecalibrate: () => void;
   onConfigUpdate: () => void;
+  onKeyPress: (keys: string[]) => void;
 }
 
 export function Header({
@@ -54,7 +58,8 @@ export function Header({
    onResume,
    onRecalibrate,
    onConfigUpdate,
-}: HeaderProps) {
+   onKeyPress,
+ }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
 
@@ -103,6 +108,33 @@ export function Header({
             <ErrorIcon sx={{ color: "error.main" }} />
           )}
         </Box>
+        <IconButton
+          edge="end"
+          color="inherit"
+          aria-label="mute"
+          onClick={() => onKeyPress(["volume_mute"])}
+          sx={{ mr: 0.5 }}
+        >
+          <VolumeOffIcon />
+        </IconButton>
+        <IconButton
+          edge="end"
+          color="inherit"
+          aria-label="volume down"
+          onClick={() => onKeyPress(["volume_down"])}
+          sx={{ mr: 0.5 }}
+        >
+          <VolumeDownIcon />
+        </IconButton>
+        <IconButton
+          edge="end"
+          color="inherit"
+          aria-label="volume up"
+          onClick={() => onKeyPress(["volume_up"])}
+          sx={{ mr: 1 }}
+        >
+          <VolumeUpIcon />
+        </IconButton>
         <IconButton
           edge="end"
           color="inherit"

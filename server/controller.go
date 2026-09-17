@@ -219,6 +219,10 @@ func (c *PacketController) ProcessPacket(packet Packet) error {
 		scaledDeltaY := int32(p.DeltaY * sensitivity)
 		return c.mouse.Scroll(scaledDeltaX, scaledDeltaY)
 
+	case KeyPress:
+		p := packet.(*KeyPressPacket)
+		return c.mouse.KeyPress(p.Keys)
+
 	case LeftClickUp:
 		c.logIfEnabled("Left click up")
 		return c.mouse.Release("left")
