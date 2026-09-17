@@ -437,6 +437,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	configPacket := server.ConfigSyncPacket{
 		PacketType:           "config_sync",
 		LastPort:             config.LastPort,
+		HostPlatform:         string(server.DetectDisplayServer()),
 		PointerSensitivity:   config.PointerSensitivity,
 		HandheldSensitivity:  config.HandheldSensitivity,
 		ScrollSensitivity:    config.ScrollSensitivity,

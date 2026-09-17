@@ -9,8 +9,23 @@ html {
     "Helvetica Neue",
     Arial;
 }
+html {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #0f1720;
+}
+
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+#root {
+  height: 100%;
 }
 
 :root {

@@ -23,6 +23,7 @@ export default function App() {
   const [buttonsAboveTouchpad, setButtonsAboveTouchpad] = useState<boolean | undefined>(undefined);
   const [naturalScroll, setNaturalScroll] = useState<boolean | undefined>(undefined);
   const [swapLeftRightClick, setSwapLeftRightClick] = useState<boolean | undefined>(undefined);
+  const [hostPlatform, setHostPlatform] = useState<string>("");
   const [swipeDirection, setSwipeDirection] = useState<string>("None");
   const [swipeMagnitude, setSwipeMagnitude] = useState<number>(0);
   const calibrationCountRef = useRef(0);
@@ -163,6 +164,7 @@ export default function App() {
             setButtonsAboveTouchpad(parsedData.buttonsAboveTouchpad !== false); // Default true
             setNaturalScroll(parsedData.naturalScroll || false);
             setSwapLeftRightClick(parsedData.swapLeftRightClick || false);
+            setHostPlatform(parsedData.hostPlatform || "");
             setConfigLoaded(true);
           }
         } catch (error) {
@@ -286,9 +288,48 @@ export default function App() {
     [ws, authKey, connectWebSocket],
   );
 
+  const sendTypingPacket = useCallback(
+    (packet: Packet) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          if (!packet.type) {
+            return;
+          }
+          ws.send(JSON.stringify(packet));
+        } catch (error) {
+          console.error("Failed to send typing packet:", error);
+        }
+      } else {
+        console.warn("WebSocket not ready, typing packet not sent:", packet);
+      }
+    },
+    [ws],
+  );
+
   const handleKeyPress = useCallback(
     (keys: string[]) => {
       sendPacket({ type: "key_press", keys });
+    },
+    [sendPacket],
+  );
+
+  const handleTypeChar = useCallback(
+    (char: string) => {
+      sendTypingPacket({ type: "text_input", text: char });
+    },
+    [sendTypingPacket],
+  );
+
+  const handleTypingKeyPress = useCallback(
+    (keys: string[]) => {
+      sendTypingPacket({ type: "key_press", keys });
+    },
+    [sendTypingPacket],
+  );
+
+  const handleSwitchWorkspace = useCallback(
+    (direction: string) => {
+      sendPacket({ type: "workspace_switch", direction });
     },
     [sendPacket],
   );
@@ -461,7 +502,7 @@ export default function App() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
+        height: '100dvh',
         fontSize: '18px',
         flexDirection: 'column',
         gap: '16px'
@@ -505,13 +546,18 @@ export default function App() {
         onRecalibrate={handleRecalibrate}
         onConfigUpdate={sendConfigUpdate}
         onKeyPress={handleKeyPress}
+        onTypeChar={handleTypeChar}
+        onTypingKeyPress={handleTypingKeyPress}
+        hostPlatform={hostPlatform}
+        onSwitchWorkspace={handleSwitchWorkspace}
       />
 
       <main
         style={{
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100dvh",
+          overflow: "hidden",
           gap: 4,
           position: "relative",
         }}

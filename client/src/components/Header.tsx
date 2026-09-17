@@ -13,9 +13,10 @@ import Box from "@mui/material/Box";
 import SettingsModal from "./SettingsModal";
 import PauseModal from "./PauseModal";
 import PauseIcon from "@mui/icons-material/Pause";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
-import VolumeDownIcon from "@mui/icons-material/VolumeDown";
-import VolumeOffIcon from "@mui/icons-material/VolumeOff";
+import TuneIcon from "@mui/icons-material/Tune";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
+import KeyboardModal from "./KeyboardModal";
+import ControlsModal from "./ControlsModal";
 
 interface HeaderProps {
   pointerSensitivity: number;
@@ -37,6 +38,10 @@ interface HeaderProps {
   onRecalibrate: () => void;
   onConfigUpdate: () => void;
   onKeyPress: (keys: string[]) => void;
+  onTypeChar: (char: string) => void;
+  onTypingKeyPress: (keys: string[]) => void;
+  hostPlatform: string;
+  onSwitchWorkspace: (direction: string) => void;
 }
 
 export function Header({
@@ -59,9 +64,15 @@ export function Header({
    onRecalibrate,
    onConfigUpdate,
    onKeyPress,
+   onTypeChar,
+   onTypingKeyPress,
+   hostPlatform,
+   onSwitchWorkspace,
  }: HeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
 
   const handleSettingsOpen = () => {
     setSettingsOpen(true);
@@ -79,6 +90,16 @@ export function Header({
 
   const handlePauseClose = () => {
     setPauseOpen(false);
+    onResume();
+  };
+
+  const handleKeyboardOpen = () => {
+    onPause();
+    setKeyboardOpen(true);
+  };
+
+  const handleKeyboardClose = () => {
+    setKeyboardOpen(false);
     onResume();
   };
 
@@ -111,29 +132,20 @@ export function Header({
         <IconButton
           edge="end"
           color="inherit"
-          aria-label="mute"
-          onClick={() => onKeyPress(["volume_mute"])}
-          sx={{ mr: 0.5 }}
-        >
-          <VolumeOffIcon />
-        </IconButton>
-        <IconButton
-          edge="end"
-          color="inherit"
-          aria-label="volume down"
-          onClick={() => onKeyPress(["volume_down"])}
-          sx={{ mr: 0.5 }}
-        >
-          <VolumeDownIcon />
-        </IconButton>
-        <IconButton
-          edge="end"
-          color="inherit"
-          aria-label="volume up"
-          onClick={() => onKeyPress(["volume_up"])}
+          aria-label="controls"
+          onClick={() => setControlsOpen(true)}
           sx={{ mr: 1 }}
         >
-          <VolumeUpIcon />
+          <TuneIcon />
+        </IconButton>
+        <IconButton
+          edge="end"
+          color="inherit"
+          aria-label="keyboard"
+          onClick={handleKeyboardOpen}
+          sx={{ mr: 1 }}
+        >
+          <KeyboardIcon />
         </IconButton>
         <IconButton
           edge="end"
@@ -171,6 +183,19 @@ export function Header({
           onRecalibrate={onRecalibrate}
         />
         <PauseModal open={pauseOpen} onClose={handlePauseClose} />
+        <KeyboardModal
+          open={keyboardOpen}
+          onClose={handleKeyboardClose}
+          onTypeChar={onTypeChar}
+          onKeyPress={onTypingKeyPress}
+        />
+        <ControlsModal
+          open={controlsOpen}
+          onClose={() => setControlsOpen(false)}
+          hostPlatform={hostPlatform}
+          onKeyPress={onKeyPress}
+          onSwitchWorkspace={onSwitchWorkspace}
+        />
       </Toolbar>
     </AppBar>
   );
