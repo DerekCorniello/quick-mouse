@@ -25,7 +25,6 @@ default_qm_dir() {
   fi
 }
 QM_DIR="${QM_QUICK_MOUSE_DIR:-$(default_qm_dir)}"
-QM_REPO_URL="${QM_REPO_URL:-https://github.com/DerekCorniello/quick-mouse.git}"
 BIN="$QM_DIR/quick-mouse"
 
 fail() {
@@ -82,17 +81,12 @@ generate_cert() {
     || fail "certificate generation failed in $QM_DIR/certs"
 }
 
-# The plugin ships source only, so a fresh install has no checkout to build.
-# Fetch the upstream project on first start.
+# The marketplace ships the whole project (manifest and go.mod together), so
+# the checkout this script lives in already has the source. Never fetch code at
+# runtime: if the source is missing, stop and ask the user where it is.
 ensure_source() {
   [[ -f "$QM_DIR/go.mod" ]] && return 0
-  if [[ -e "$QM_DIR" ]]; then
-    fail "$QM_DIR exists but is not a quick-mouse checkout (unset QM_QUICK_MOUSE_DIR to use the default)"
-  fi
-  command -v git >/dev/null 2>&1 || fail "quick-mouse source not found at $QM_DIR and git is unavailable to fetch it"
-  echo "Fetching quick-mouse into $QM_DIR ..." >&2
-  mkdir -p "$(dirname "$QM_DIR")"
-  git clone --depth 1 "$QM_REPO_URL" "$QM_DIR" >&2 || fail "git clone failed: $QM_REPO_URL"
+  fail "quick-mouse source not found at $QM_DIR (set QM_QUICK_MOUSE_DIR to a checkout)"
 }
 
 ensure_assets() {
