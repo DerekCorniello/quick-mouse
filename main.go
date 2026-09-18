@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/mdp/qrterminal/v3"
 	"quick-mouse/server"
+	"rsc.io/qr"
 )
 
 type Config struct {
@@ -308,10 +310,14 @@ var controller *server.PacketController
 var connectedClients bool
 var logFlag = flag.Bool("log", false, "enable logging of non-movement events")
 var portArg = flag.Int("port", 3000, "enable logging of non-movement events")
+var noTUIFlag = flag.Bool("no-tui", false, "disable the terminal UI (for background runs)")
+var qrJSONFileFlag = flag.String("qr-json-file", "", "write connection info and QR matrix to this JSON file (for desktop integrations)")
 var lastLog string
 var lastAction string
 var physicsRunning bool
 var displayUpdateChan = make(chan struct{}, 100)
+
+var qrWriteMutex sync.Mutex
 
 func enterAlternateScreen() {
 	fmt.Print("\033[?1049h\033[H\033[2J") // switch to alt screen, move to top, clear
@@ -322,6 +328,10 @@ func exitAlternateScreen() {
 }
 
 func updateDisplay() {
+	if *noTUIFlag {
+		return
+	}
+
 	// clear screen and move to top
 	fmt.Print("\033[H\033[2J")
 
@@ -358,6 +368,65 @@ func updateDisplay() {
 }
 
 var authKey string
+
+// QRInfo is the payload written to the -qr-json-file target so desktop
+// integrations (e.g. an Omarchy bar widget) can draw the pairing code without
+// scraping the terminal UI. Matrix rows are '1'/'0' strings, one per module.
+type QRInfo struct {
+	URL       string   `json:"url"`
+	Matrix    []string `json:"matrix"`
+	Size      int      `json:"size"`
+	Port      int      `json:"port"`
+	Connected bool     `json:"connected"`
+}
+
+func connectionURL() string {
+	localIP := getLocalIP()
+	return fmt.Sprintf("https://%s:%d/?key=%s", localIP, *portArg, url.QueryEscape(authKey))
+}
+
+func buildQRInfo() QRInfo {
+	info := QRInfo{
+		URL:       connectionURL(),
+		Port:      *portArg,
+		Connected: connectedClients,
+	}
+	code, err := qr.Encode(info.URL, qr.L)
+	if err != nil {
+		return info
+	}
+	rows := make([]string, code.Size)
+	for y := 0; y < code.Size; y++ {
+		var b strings.Builder
+		for x := 0; x < code.Size; x++ {
+			if code.Black(x, y) {
+				b.WriteByte('1')
+			} else {
+				b.WriteByte('0')
+			}
+		}
+		rows[y] = b.String()
+	}
+	info.Matrix = rows
+	info.Size = code.Size
+	return info
+}
+
+func writeQRInfo() {
+	if *qrJSONFileFlag == "" {
+		return
+	}
+	qrWriteMutex.Lock()
+	defer qrWriteMutex.Unlock()
+	data, err := json.MarshalIndent(buildQRInfo(), "", "  ")
+	if err != nil {
+		logIfEnabled("Error building QR info: %v", err)
+		return
+	}
+	if err := os.WriteFile(*qrJSONFileFlag, data, 0644); err != nil {
+		logIfEnabled("Error writing QR info file: %v", err)
+	}
+}
 
 func logIfEnabled(format string, args ...any) {
 	if *logFlag {
@@ -430,6 +499,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	case displayUpdateChan <- struct{}{}:
 	default:
 	}
+	writeQRInfo()
 
 	// send current configuration to client
 	config := getConfig()
@@ -472,6 +542,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		case displayUpdateChan <- struct{}{}:
 		default:
 		}
+		writeQRInfo()
 	}()
 
 	// start keep-alive mechanism
@@ -619,8 +690,10 @@ func main() {
 	}
 
 	// lets not overflow the tui
-	enterAlternateScreen()
-	defer exitAlternateScreen()
+	if !*noTUIFlag {
+		enterAlternateScreen()
+	}
+	defer func() { if !*noTUIFlag { exitAlternateScreen() } }()
 
 	// set up a signal handling for clean exit
 	sigChan := make(chan os.Signal, 1)
@@ -628,11 +701,14 @@ func main() {
 	go func() {
 		<-sigChan
 		close(displayUpdateChan)
-		exitAlternateScreen()
+		if !*noTUIFlag {
+			exitAlternateScreen()
+		}
 		os.Exit(0)
 	}()
 
 	authKey = generateAuthKey()
+	writeQRInfo()
 	var err error
 	controller, err = server.NewPacketController(*logFlag)
 	if err != nil {
@@ -642,11 +718,13 @@ func main() {
 	physicsRunning = true
 
 	// Start display update goroutine
-	go func() {
-		for range displayUpdateChan {
-			updateDisplay()
-		}
-	}()
+	if !*noTUIFlag {
+		go func() {
+			for range displayUpdateChan {
+				updateDisplay()
+			}
+		}()
+	}
 
 	// serve static files from the React build directory
 	fs := http.FileServer(http.Dir("./client/build"))
