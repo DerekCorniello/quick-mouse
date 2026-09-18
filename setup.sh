@@ -84,10 +84,18 @@ cd ..
 mkdir -p certs
 
 echo "Generating TLS certificate..."
+# Phones ignore the certificate CN and require a subjectAltName (SAN), so the
+# cert must list every name/IP the client may connect through, including the
+# LAN address the QR code points at.
+LOCAL_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}')
+SAN="DNS:localhost,IP:127.0.0.1"
+[[ -n $LOCAL_IP ]] && SAN="$SAN,IP:$LOCAL_IP"
 openssl req -x509 -newkey rsa:4096 \
   -keyout certs/localhost-key.pem \
   -out certs/localhost.pem \
-  -days 365 -nodes -subj "/CN=localhost"
+  -days 365 -nodes -subj "/CN=localhost" \
+  -addext "subjectAltName=$SAN"
+echo "Certificate covers: $SAN"
 
 echo "Installation done."
 echo "Run with: ./quick-mouse"

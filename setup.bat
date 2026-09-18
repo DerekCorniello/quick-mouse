@@ -92,12 +92,19 @@ if errorlevel 1 (
 )
 
 :openssl_found
-echo Generating TLS certificate for localhost...
+:: Phone browsers ignore the CN and require the LAN IP in a subjectAltName,
+:: so include every address the QR code may point at.
+set "LOCAL_IP="
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 ^| Where-Object {$_.IPAddress -ne '127.0.0.1' -and $_.PrefixOrigin -ne 'WellKnown'} ^| Select-Object -First 1 -ExpandProperty IPAddress)" 2^>nul`) do set "LOCAL_IP=%%i"
+set "SAN=DNS:localhost,IP:127.0.0.1"
+if defined LOCAL_IP set "SAN=!SAN!,IP:!LOCAL_IP!"
+echo Generating TLS certificate for localhost and !SAN!...
 "%OPENSSL_CMD%" req -x509 -newkey rsa:4096 ^
     -keyout certs\localhost-key.pem ^
     -out certs\localhost.pem ^
     -days 365 -nodes ^
-    -subj "/CN=localhost"
+    -subj "/CN=localhost" ^
+    -addext "subjectAltName=!SAN!"
 if errorlevel 1 (
     echo [ERROR] Certificate generation failed.
     exit /b 1
