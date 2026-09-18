@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# omarchy-quick-mouse: start/stop/status the quick-mouse server for the
+# nathan.quick-mouse bar widget. Each subcommand prints one plain line that
+# the QML panel parses; keep it that way.
+
+set -euo pipefail
+
+APP_ID="nathan.quick-mouse"
+STATE_DIR="${QM_STATE_DIR:-$HOME/.local/state/$APP_ID}"
+PID_FILE="$STATE_DIR/server.pid"
+QR_FILE="$STATE_DIR/qr.json"
+LOG_FILE="$STATE_DIR/server.log"
+LOCK_FILE="$STATE_DIR/start.lock"
+
+# Where the project lives. The plugin repo *is* the project checkout when
+# installed from git, so prefer the directory this script was shipped in;
+# fall back to a conventional path for a source checkout used standalone.
+default_qm_dir() {
+  local root
+  root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+  if [[ -f "$root/go.mod" ]]; then
+    printf '%s\n' "$root"
+  else
+    printf '%s\n' "$HOME/repos/quick-mouse"
+  fi
+}
+QM_DIR="${QM_QUICK_MOUSE_DIR:-$(default_qm_dir)}"
+QM_REPO_URL="${QM_REPO_URL:-https://github.com/DerekCorniello/quick-mouse.git}"
+BIN="$QM_DIR/quick-mouse"
+
+fail() {
+  echo "error: $*" >&2
+  exit 1
+}
+
+is_running() {
+  [[ -f "$PID_FILE" ]] || return 1
+  local pid
+  pid=$(cat "$PID_FILE" 2>/dev/null) || return 1
+  [[ -n $pid ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+resolve_port() {
+  if [[ -n ${QM_PORT:-} ]]; then
+    echo "$QM_PORT"
+    return
+  fi
+  local p=3000
+  if [[ -f "$QM_DIR/config.json" ]] && command -v jq >/dev/null 2>&1; then
+    p=$(jq -r '.lastPort // 3000' "$QM_DIR/config.json" 2>/dev/null || true)
+    [[ $p =~ ^[0-9]+$ ]] || p=3000
+  fi
+  echo "$p"
+}
+
+lan_ip() {
+  ip -4 route get 1.1.1.1 2>/dev/null \
+    | awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}'
+}
+
+# Phone browsers ignore the CN and require the LAN IP in the SAN, so a
+# localhost-only cert makes the QR target unroutable. Rebuild when the cert is
+# missing or doesn't cover the address we advertise.
+cert_covers() {
+  local ip="$1" pem="$QM_DIR/certs/localhost.pem"
+  [[ -f $pem && -f $QM_DIR/certs/localhost-key.pem ]] || return 1
+  [[ -z $ip ]] && return 0
+  openssl x509 -in "$pem" -noout -checkip "$ip" >/dev/null 2>&1
+}
+
+generate_cert() {
+  local ip san="DNS:localhost,IP:127.0.0.1"
+  ip=$(lan_ip)
+  [[ -n $ip ]] && san="$san,IP:$ip"
+  mkdir -p "$QM_DIR/certs"
+  openssl req -x509 -newkey rsa:4096 \
+    -keyout "$QM_DIR/certs/localhost-key.pem" \
+    -out "$QM_DIR/certs/localhost.pem" \
+    -days 365 -nodes -subj "/CN=localhost" \
+    -addext "subjectAltName=$san" 2>/dev/null \
+    || fail "certificate generation failed in $QM_DIR/certs"
+}
+
+# The plugin ships source only, so a fresh install has no checkout to build.
+# Fetch the upstream project on first start.
+ensure_source() {
+  [[ -f "$QM_DIR/go.mod" ]] && return 0
+  if [[ -e "$QM_DIR" ]]; then
+    fail "$QM_DIR exists but is not a quick-mouse checkout (unset QM_QUICK_MOUSE_DIR to use the default)"
+  fi
+  command -v git >/dev/null 2>&1 || fail "quick-mouse source not found at $QM_DIR and git is unavailable to fetch it"
+  echo "Fetching quick-mouse into $QM_DIR ..." >&2
+  mkdir -p "$(dirname "$QM_DIR")"
+  git clone --depth 1 "$QM_REPO_URL" "$QM_DIR" >&2 || fail "git clone failed: $QM_REPO_URL"
+}
+
+ensure_assets() {
+  ensure_source
+  if [[ ! -x "$BIN" ]]; then
+    command -v go >/dev/null 2>&1 || fail "binary missing at $BIN and no go toolchain to build it"
+    (cd "$QM_DIR" && go build -o quick-mouse .) || fail "go build failed in $QM_DIR"
+  fi
+  if [[ ! -f "$QM_DIR/client/build/index.html" ]]; then
+    command -v npm >/dev/null 2>&1 || fail "client build missing at $QM_DIR/client/build and no npm to build it"
+    (cd "$QM_DIR/client" && npm install && npm run build) || fail "client build failed in $QM_DIR/client"
+  fi
+  cert_covers "$(lan_ip)" || generate_cert
+  if [[ ! -w /dev/uinput ]]; then
+    fail "/dev/uinput is not writable — run: sudo modprobe uinput (and add your user to the input group)"
+  fi
+}
+
+cmd_start() {
+  mkdir -p "$STATE_DIR"
+  # Serialize starts so two bar instances/screens can't both spawn a server.
+  # The timeout matters: a wedged start must not hang the caller forever.
+  exec 9>"$LOCK_FILE"
+  flock -w 10 9 || fail "another start is already in progress"
+
+  if is_running; then
+    echo "running $(cat "$PID_FILE")"
+    exit 0
+  fi
+
+  ensure_assets
+
+  local port
+  port=$(resolve_port)
+
+  rm -f "$QR_FILE" "$PID_FILE"
+  # setsid detaches into a new session; the inner sh writes its own pid (the
+  # same pid after exec) so stop() can kill the server precisely. FD 9 (the
+  # start lock) must be closed in the child or the flock is inherited by the
+  # long-lived server and every later start blocks on it.
+  (exec 9>&-; cd "$QM_DIR" && setsid -f sh -c \
+      'echo "$$" > "$1"; exec "$2" -no-tui -qr-json-file "$3" -port "$4" >>"$5" 2>&1' \
+      daemon "$PID_FILE" "$BIN" "$QR_FILE" "$port" "$LOG_FILE" </dev/null) \
+    || fail "could not launch the server"
+
+  for _ in $(seq 1 60); do
+    [[ -f "$QR_FILE" ]] && break
+    sleep 0.1
+  done
+
+  # qr.json is written before the TLS listener binds, so the QR could be
+  # scannable a beat before the port answers. Wait for the socket too.
+  for _ in $(seq 1 60); do
+    (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break
+    sleep 0.1
+  done
+
+  if [[ ! -f "$QR_FILE" ]]; then
+    echo "error: server did not become ready; recent log:" >&2
+    tail -n 8 "$LOG_FILE" 2>/dev/null >&2 || true
+    exit 1
+  fi
+
+  echo "running $(cat "$PID_FILE")"
+}
+
+cmd_stop() {
+  local pid=""
+  if [[ -f "$PID_FILE" ]]; then
+    pid=$(cat "$PID_FILE" 2>/dev/null || true)
+  fi
+  if [[ -n $pid ]] && kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    for _ in $(seq 1 50); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.1
+    done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$PID_FILE" "$QR_FILE"
+  echo "stopped"
+}
+
+cmd_status() {
+  if is_running; then
+    echo "running $(cat "$PID_FILE")"
+  else
+    echo "stopped"
+  fi
+}
+
+case "${1:-}" in
+  start) cmd_start ;;
+  stop) cmd_stop ;;
+  status) cmd_status ;;
+  *) echo "usage: $0 {start|stop|status}" >&2; exit 2 ;;
+esac

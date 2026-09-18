@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "nathan.quick-mouse",
+  "name": "Quick Mouse",
+  "version": "0.1.0",
+  "author": "Nathan Grilliot",
+  "license": "MIT",
+  "description": "Phone-as-mouse: start the quick-mouse server straight from the bar and scan a QR code to pair your phone.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Quick Mouse",
+    "description": "Starts and stops the quick-mouse server in the background and shows its pairing QR code. Left click opens the panel (and starts the server if it is not running); right click stops it.",
+    "category": "Input",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

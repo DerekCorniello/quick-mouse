@@ -26,15 +26,53 @@ Quick Mouse turns your phone into a precise wireless mouse. No extra hardware. O
 
 ## Installation
 
+### Omarchy bar plugin (recommended)
+
+On [Omarchy](https://omarchy.org/) Quick Mouse installs as a shell plugin: a bar
+widget that starts the server in the background and shows the pairing QR code.
+No terminal needed after setup.
+
+1. Install the prerequisites:
+
+   ```bash
+   omarchy pkg add go npm jq
+   sudo modprobe uinput
+   sudo usermod -aG input "$USER"
+   ```
+
+   The `modprobe` takes effect immediately; the group change needs a log out and
+   back in (or a reboot). `go`/`npm` are only needed for the first build.
+
+2. Add and enable the plugin:
+
+   ```bash
+   omarchy plugin add https://github.com/DerekCorniello/quick-mouse.git --enable
+   ```
+
+3. Click the mouse icon in the bar, then scan the QR code with your phone.
+
+   Left click opens the panel and starts the server if it is not running; right
+   click stops the server. The first click builds the Go binary and the React
+   client in the plugin's own checkout, so it takes a minute; later starts are
+   instant.
+
+4. On the phone, accept the self-signed certificate warning (Android:
+   **Advanced → Proceed**; iOS: **Show Details → visit this website**), allow
+   motion access, and calibrate.
+
+To uninstall: `omarchy plugin remove nathan.quick-mouse`.
+
+### Linux, macOS, and Windows (manual)
+
 Run the relevant install command depending on the OS of the system you are controlling.
 
-### Linux and MacOS
+#### Linux and MacOS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.sh | bash
 ```
 
-### Windows (Must be run in PowerShell)
+#### Windows (Must be run in PowerShell)
 
 ```bash
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DerekCorniello/quick-mouse/main/setup.bat" -OutFile "$env:TEMP\setup.bat"; & cmd.exe /c "$env:TEMP\setup.bat"
@@ -42,12 +80,47 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/DerekCorniello/quick-m
 
 ## Getting Started
 
-1. **Start the App**: Launch Quick Mouse on your computer by running `quick-mouse` in your terminal or starting the application
-2. **Scan QR Code**: Open Quick Mouse on your phone and scan the displayed QR code
+1. **Start the App**: click the Quick Mouse widget in the bar, or run
+   `quick-mouse` in a terminal to print the QR code there
+2. **Scan QR Code**: scan the displayed QR code with your phone
 3. **Accept Permissions**: Quick Mouse will request necessary permissions for pointer control (gyroscope sensor information)
 4. **Perform Calibration**: Follow the on-screen instructions to calibrate your device for optimal performance.
 5. Start using your phone as a mouse! You can use your phone as a pointer or use the built-in trackpad mode.
 6. **Make Adjustments**: Access settings to customize sensitivity, gestures, and other preferences.
+
+## Troubleshooting
+
+- **The phone hangs on a blank page.** The host firewall is dropping the port.
+  With `ufw`, allow it: `sudo ufw allow 3000/tcp` (or your configured port).
+  Also confirm the phone is on the same network as the computer.
+- **"not private" / certificate warning on the phone.** Expected — the server
+  uses a self-signed certificate. Tap through it once (Android: **Advanced →
+  Proceed**; iOS: **Show Details → visit this website**).
+- **`/dev/uinput is not writable`.** Run `sudo modprobe uinput`, add your user
+  to the `input` group, then log out and back in.
+
+### Configuration
+
+The plugin/script honors these environment variables when they set sensible
+defaults:
+
+- `QM_QUICK_MOUSE_DIR` — where the quick-mouse checkout lives (default: the plugin's own checkout, else `~/repos/quick-mouse`)
+- `QM_PORT` — server port (default from `config.json`, else `3000`)
+- `QM_STATE_DIR` — runtime state (default `~/.local/state/nathan.quick-mouse`)
+
+### Security and permissions
+
+Plugins run as unsandboxed code inside `omarchy-shell`. This plugin:
+
+- starts a local HTTPS server (`quick-mouse`) that listens on your LAN and
+  injects input events through `/dev/uinput`; the QR code embeds a per-start
+  auth key
+- does **not** use `sudo`; the privileged setup (uinput, `input` group,
+  firewall) is performed by you
+- builds the Go server and React client from the checkout it ships in
+
+State lives in `~/.local/state/nathan.quick-mouse/` (`server.pid`, `qr.json`,
+`server.log`).
 
 ## Technical Stack
 
