@@ -4,22 +4,6 @@
 
 Phone-as-mouse over WebSocket (QR-pairing). A Go monolith (`main.go` at repo root) runs the WebSocket backend AND serves the built React client. Hackathon project; code is pragmatic, keep it that way.
 
-## Build & run
-
-Repeat this worker-loop for any backend OR client change:
-
-```bash
-go build -o quick-mouse
-cd client && npm install && npm run build && cd ..
-./quick-mouse            # optional: -port <1024-65534>, -log
-```
-
-- The binary serves `./client/build`, so after editing `client/src` you MUST run `npm run build` and restart the binary, or the changes won't appear. Build output dir is `build`, not `dist` (see `client/vite.config.ts`).
-- The server requires self-signed TLS certs at `certs/localhost.pem` + `certs/localhost-key.pem` (gitignored) or it fails at startup. Generate once (the SAN is mandatory — phone browsers ignore `CN`, so a localhost-only cert makes the QR's LAN URL fail):
-  `openssl req -x509 -newkey rsa:4096 -keyout certs/localhost-key.pem -out certs/localhost.pem -days 365 -nodes -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:<lan-ip>"`
-- `setup.sh` / `setup.bat` do the above for users. Don't break that contract.
-- Port: default 3000. If `-port` flag is given it's persisted to `config.json`; otherwise `config.json` `lastPort` is used. Client always connects via `window.location.host`.
-
 ## Architecture
 
 - `main.go` — HTTP server, WebSocket handler, auth, config load/save, terminal UI (alternate screen + QR code printed on stdout). Config (`pointerSensitivity`, etc.) lives server-side in `config.json` (gitignored, created on first run). Sent to client via `config_sync` on connect; client echoes changes back as `config_update`, handled in `wsHandler`, NOT the controller. The client intentionally has no config defaults — it waits for `config_sync` before rendering.
